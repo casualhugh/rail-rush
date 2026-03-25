@@ -117,6 +117,7 @@ routerAdd("POST", "/api/rr/station/{stationId}/contest", (e) => {
     claim.set("team_id", teamId);
     claim.set("coins_placed", newStake);
     claim.set("action", "contest_win");
+    claim.set("stake_ceiling", currentStake + maxStakeIncrement);
     claim.set("claimed_at", new Date().toISOString());
     txApp.save(claim);
 
