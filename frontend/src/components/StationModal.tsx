@@ -51,11 +51,12 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   // Load ceiling when this is our own station. Empty [] — fires once on mount.
   useEffect(() => {
     if (isOwn) loadCeiling()
-  }, [])
+  }, [station.id])
 
   async function loadCeiling() {
-    setCeilingError(null)
     setCeilingLoading(true)
+    setCeilingError(null)
+    setStakeCeiling(null)
     try {
       const data = await getStationCeiling(station.id)
       setStakeCeiling(data.stakeCeiling)
@@ -162,7 +163,9 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
               </div>
             )}
 
-            {stakeCeiling !== null && currentStake < stakeCeiling && (
+            {stakeCeiling !== null && currentStake < stakeCeiling && (() => {
+              const ceilingRemaining = stakeCeiling - currentStake
+              return (
               <div className={styles.actions}>
                 <p className={styles.actionLabel}>{currentStake}🪙 staked · ceiling {stakeCeiling}🪙</p>
                 <p className={styles.actionLabel}>Reinforce</p>
@@ -170,7 +173,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                   <input
                     type="range"
                     min={1}
-                    max={stakeCeiling! - currentStake}
+                    max={ceilingRemaining}
                     value={reinforceCoins}
                     onChange={e => setReinforceCoins(+e.target.value)}
                     className={styles.slider}
@@ -186,7 +189,8 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                   {loading ? '…' : `Reinforce — ${reinforceCoins} coin${reinforceCoins !== 1 ? 's' : ''}`}
                 </button>
               </div>
-            )}
+              )
+            })()}
 
             {stakeCeiling !== null && currentStake === stakeCeiling && (
               <p className={styles.reinforcedMsg}>Fully reinforced — {currentStake}🪙 staked</p>
