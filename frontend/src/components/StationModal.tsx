@@ -51,7 +51,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   // Load ceiling when this is our own station. Re-fires if station changes.
   useEffect(() => {
     if (isOwn) loadCeiling()
-  }, [station.id])
+  }, [station.id, isOwn])
 
   async function loadCeiling() {
     setCeilingLoading(true)
@@ -173,7 +173,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                   <input
                     type="range"
                     min={1}
-                    max={ceilingRemaining}
+                    max={Math.min(ceilingRemaining, myBalance)}
                     value={reinforceCoins}
                     onChange={e => setReinforceCoins(+e.target.value)}
                     className={styles.slider}
