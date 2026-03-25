@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { api } from '../lib/pb'
-import { useGameStore, type Station, type Team, type Challenge } from '../store/gameStore'
+import { useState, useEffect } from 'react'
+import { useGameStore, type Station, type Challenge } from '../store/gameStore'
+import { getStationCeiling, reinforceStation, claimStation, contestStation, payToll } from '../lib/api'
 import styles from './StationModal.module.css'
 
 interface Props {
@@ -14,9 +14,14 @@ interface Props {
 
 export default function StationModal({ station, myTeamId, tollCost, maxStakeIncrement, onClose, onChallengeOpen }: Props) {
   const { teams, challenges } = useGameStore()
-  const [stakeInput, setStakeInput] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Own-station ceiling state
+  const [ceilingLoading, setCeilingLoading] = useState(false)
+  const [ceilingError, setCeilingError] = useState('')
+  const [stakeCeiling, setStakeCeiling] = useState<number | null>(null)
+  const [reinforceCoins, setReinforceCoins] = useState(1)
 
   const myTeam = teams.find(t => t.id === myTeamId)
   const ownerTeam = teams.find(t => t.id === station.ownerTeamId)
@@ -43,11 +48,30 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   const effectiveToll = Math.min(tollCost, myBalance)
   const isPartialToll = effectiveToll < tollCost
 
+  // Load ceiling when this is our own station. Empty [] — fires once on mount.
+  useEffect(() => {
+    if (isOwn) loadCeiling()
+  }, [])
+
+  async function loadCeiling() {
+    setCeilingError('')
+    setCeilingLoading(true)
+    try {
+      const data = await getStationCeiling(station.id)
+      setStakeCeiling(data.stakeCeiling)
+      setReinforceCoins(1)
+    } catch (err: unknown) {
+      setCeilingError(err instanceof Error ? err.message : 'Could not load station info')
+    } finally {
+      setCeilingLoading(false)
+    }
+  }
+
   async function doClaim() {
     setError('')
     setLoading(true)
     try {
-      await api.post(`/api/rr/station/${station.id}/claim`, { teamId: myTeamId, coins: claimCoins })
+      await claimStation(station.id, myTeamId, claimCoins)
       onClose()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to claim')
@@ -58,7 +82,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
     setError('')
     setLoading(true)
     try {
-      await api.post(`/api/rr/station/${station.id}/contest`, { teamId: myTeamId, newStake: contestStake })
+      await contestStation(station.id, myTeamId, contestStake)
       onClose()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to contest')
@@ -69,10 +93,21 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
     setError('')
     setLoading(true)
     try {
-      await api.post(`/api/rr/station/${station.id}/toll`, { teamId: myTeamId })
+      await payToll(station.id, myTeamId)
       onClose()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to pay toll')
+    } finally { setLoading(false) }
+  }
+
+  async function doReinforce() {
+    setError('')
+    setLoading(true)
+    try {
+      await reinforceStation(station.id, myTeamId, reinforceCoins)
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to reinforce')
     } finally { setLoading(false) }
   }
 
@@ -111,9 +146,50 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
         {/* Own station */}
         {isOwn && (
-          <div className={styles.ownMsg}>
-            <span>✓</span> You own this station · {currentStake}🪙 staked
-          </div>
+          <>
+            <div className={styles.ownMsg}>
+              <span>✓</span> You own this station
+              {stakeCeiling !== null && ` · ${currentStake}🪙 staked · ceiling ${stakeCeiling}🪙`}
+            </div>
+
+            {ceilingLoading && <p className={styles.coinNote}>Loading…</p>}
+
+            {ceilingError && (
+              <div className={styles.actions}>
+                <p className={styles.error}>{ceilingError}</p>
+                <button className={styles.closeBtn} onClick={loadCeiling}>Retry</button>
+              </div>
+            )}
+
+            {stakeCeiling !== null && currentStake < stakeCeiling && (
+              <div className={styles.actions}>
+                <p className={styles.actionLabel}>Reinforce</p>
+                <div className={styles.sliderRow}>
+                  <input
+                    type="range"
+                    min={1}
+                    max={Math.min(stakeCeiling - currentStake, myBalance)}
+                    value={reinforceCoins}
+                    onChange={e => setReinforceCoins(+e.target.value)}
+                    className={styles.slider}
+                  />
+                  <span className={styles.sliderVal}>{reinforceCoins}🪙</span>
+                </div>
+                <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
+                <button
+                  className={styles.primaryBtn}
+                  onClick={doReinforce}
+                  disabled={loading || myBalance < 1}
+                >
+                  {loading ? '…' : `Reinforce — ${reinforceCoins} coin${reinforceCoins !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            )}
+
+            {stakeCeiling !== null && currentStake >= stakeCeiling && (
+              <p className={styles.reinforcedMsg}>Fully reinforced — {currentStake}🪙 staked</p>
+            )}
+          </>
         )}
 
         {/* Unclaimed station */}
@@ -121,7 +197,8 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
           <div className={styles.actions}>
             <p className={styles.actionLabel}>Place coins to claim</p>
             <div className={styles.sliderRow}>
-              <input type="range" min={1} max={Math.min(5, myBalance)} value={claimCoins}
+              {/* max uses maxStakeIncrement prop — previously hard-coded to 5 */}
+              <input type="range" min={1} max={Math.min(maxStakeIncrement, myBalance)} value={claimCoins}
                 onChange={e => setClaimCoins(+e.target.value)} className={styles.slider} />
               <span className={styles.sliderVal}>{claimCoins}🪙</span>
             </div>
@@ -135,7 +212,6 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
         {/* Enemy station */}
         {isEnemy && (
           <div className={styles.actions}>
-            {/* Contest */}
             <p className={styles.actionLabel}>Contest & Claim</p>
             {myBalance >= minContest ? (
               <>
@@ -158,7 +234,6 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
             <div className={styles.divider} />
 
-            {/* Toll */}
             <button className={styles.tollBtn} onClick={doToll} disabled={loading}>
               {isPartialToll
                 ? `Pay Toll — ${effectiveToll}🪙 (all you have) → ${ownerTeam?.name}`
