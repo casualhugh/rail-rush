@@ -252,6 +252,91 @@ routerAdd("GET", "/api/rr/station/{stationId}/ceiling", (e) => {
 });
 
 
+// POST /api/rr/station/{stationId}/reinforce
+// Body: { teamId, coins }
+// Owning team adds coins to their stake, up to the stake_ceiling.
+routerAdd("POST", "/api/rr/station/{stationId}/reinforce", (e) => {
+  const { writeEvent } = require(`${__hooks}/shared.js`);
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const stationId = e.request.pathValue("stationId");
+  const body = e.requestInfo().body;
+  const teamId = body.teamId;
+  const coins = parseInt(body.coins, 10);
+
+  if (!teamId) throw new BadRequestError("teamId is required");
+  if (isNaN(coins) || coins < 1) throw new BadRequestError("coins must be a positive integer");
+
+  let station;
+  try { station = e.app.findRecordById("stations", stationId); }
+  catch (_) { throw new NotFoundError("station not found"); }
+
+  const game = e.app.findRecordById("games", station.get("game_id"));
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  const team = e.app.findRecordById("teams", teamId);
+  if (team.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
+
+  const ownerTeamId = station.get("current_owner_team_id");
+  if (!ownerTeamId) throw new BadRequestError("station is unclaimed");
+  if (ownerTeamId !== teamId) throw new ForbiddenError("you do not own this station");
+
+  const members = e.app.findRecordsByFilter(
+    "team_members",
+    "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true",
+    "", 1, 0,
+    { teamId, userId: authRecord.id }
+  );
+  if (!members || members.length === 0) throw new ForbiddenError("you are not an approved member of this team");
+
+  // Find stake_ceiling from most recent initial_claim or contest_win (excludes reinforce rows)
+  const claims = e.app.findRecordsByFilter(
+    "station_claims",
+    "station_id = {:stationId} && (action = 'initial_claim' || action = 'contest_win')",
+    "-claimed_at", 1, 0,
+    { stationId }
+  );
+  if (!claims || claims.length === 0) throw new NotFoundError("no claim history found for this station");
+
+  const stakeCeiling = claims[0].get("stake_ceiling") || 0;
+  const currentStake = station.get("current_stake") || 0;
+
+  if (currentStake + coins > stakeCeiling) {
+    throw new BadRequestError(`stake would exceed ceiling of ${stakeCeiling} (currently ${currentStake})`);
+  }
+  if (team.get("coin_balance") < coins) throw new BadRequestError("insufficient coins");
+
+  e.app.runInTransaction((txApp) => {
+    team.set("coin_balance", team.get("coin_balance") - coins);
+    txApp.save(team);
+
+    station.set("current_stake", currentStake + coins);
+    txApp.save(station);
+
+    const claimCol = txApp.findCollectionByNameOrId("station_claims");
+    const claim = new Record(claimCol);
+    claim.set("station_id", stationId);
+    claim.set("game_id", game.id);
+    claim.set("team_id", teamId);
+    claim.set("coins_placed", coins);
+    claim.set("action", "reinforce");
+    claim.set("stake_ceiling", stakeCeiling);
+    claim.set("claimed_at", new Date().toISOString());
+    txApp.save(claim);
+
+    writeEvent(txApp, { gameId: game.id, type: "reinforce", teamId, stationId, coinsInvolved: coins });
+  });
+
+  return e.json(200, {
+    ok: true,
+    newBalance: team.get("coin_balance"),
+    newStake: currentStake + coins,
+    stakeCeiling,
+  });
+});
+
+
 // POST /api/rr/game/{gameId}/stations
 // Body: array of { name, lat, lng } — saves station pins for this game.
 routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
