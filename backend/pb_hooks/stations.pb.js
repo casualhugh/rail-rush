@@ -1,7 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// POST /api/rr/station/{stationId}/claim
-// Body: { teamId, coins (1–5) }
 routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
   const { writeEvent } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
@@ -13,7 +11,8 @@ routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
   const coins = parseInt(body.coins, 10);
 
   if (!teamId) throw new BadRequestError("teamId is required");
-  if (!coins || coins < 1 || coins > 5) throw new BadRequestError("coins must be between 1 and 5");
+  // NOTE: coins validation against max_stake_increment is below, after game is loaded.
+  // The old hard-coded "coins > 5" check has been removed.
 
   let station;
   try { station = e.app.findRecordById("stations", stationId); }
@@ -23,11 +22,20 @@ routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
   if (station.get("current_owner_team_id")) throw new BadRequestError("station is already claimed");
 
+  const maxStakeIncrement = game.get("max_stake_increment") || 5;
+  if (isNaN(coins) || coins < 1 || coins > maxStakeIncrement) {
+    throw new BadRequestError(`coins must be between 1 and ${maxStakeIncrement}`);
+  }
+
   const team = e.app.findRecordById("teams", teamId);
   if (team.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
   if (team.get("coin_balance") < coins) throw new BadRequestError("insufficient coins");
 
-  const _claimMembers = e.app.findRecordsByFilter("team_members", "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true", "", 1, 0, { teamId, userId: authRecord.id });
+  const _claimMembers = e.app.findRecordsByFilter(
+    "team_members",
+    "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true",
+    "", 1, 0, { teamId, userId: authRecord.id }
+  );
   if (!_claimMembers || _claimMembers.length === 0) throw new ForbiddenError("you are not an approved member of this team");
 
   e.app.runInTransaction((txApp) => {
@@ -41,6 +49,7 @@ routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
     claim.set("team_id", teamId);
     claim.set("coins_placed", coins);
     claim.set("action", "initial_claim");
+    claim.set("stake_ceiling", maxStakeIncrement);
     claim.set("claimed_at", new Date().toISOString());
     txApp.save(claim);
 
