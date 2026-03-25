@@ -1,0 +1,189 @@
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: var(--color-teal);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-amber);
+  letter-spacing: -0.01em;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.username {
+  color: rgba(255,255,255,0.8);
+  font-size: 0.875rem;
+}
+
+.logoutBtn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.8);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  transition: border-color 0.15s;
+}
+.logoutBtn:hover { border-color: rgba(255,255,255,0.8); color: #fff; }
+
+.main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.joinForm {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.joinInput {
+  flex: 1;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.joinInput:focus { border-color: var(--color-teal); }
+
+.joinBtn {
+  background: var(--color-teal);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.joinBtn:hover { opacity: 0.9; }
+
+.createBtn {
+  background: var(--color-amber);
+  color: var(--color-text);
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.createBtn:hover { opacity: 0.9; }
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+.section { margin-bottom: 2rem; }
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.muted { color: var(--color-text-muted); font-size: 0.9rem; }
+
+.gameList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gameCard {
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.gameCard:has(.gameCardMain:hover) {
+  border-color: var(--color-teal);
+  box-shadow: 0 2px 8px rgba(26,107,107,0.12);
+}
+
+.gameCardMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  text-align: left;
+  background: none;
+  border: none;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  border-left: 1.5px solid rgba(0,0,0,0.08);
+  color: var(--color-text-muted);
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+.deleteBtn:hover { background: var(--color-danger); color: #fff; }
+
+.gameCardLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.gameName {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.gameCity {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.gameStatus {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

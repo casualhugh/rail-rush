@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Body -->
+  <rect x="4" y="10" width="24" height="14" rx="3" fill="#1A6B6B"/>
+  <!-- Cab / nose -->
+  <rect x="20" y="12" width="7" height="8" rx="2" fill="#155858"/>
+  <!-- Windows -->
+  <rect x="7" y="13" width="5" height="4" rx="1" fill="#B2DFDB"/>
+  <rect x="14" y="13" width="4" height="4" rx="1" fill="#B2DFDB"/>
+  <rect x="22" y="13" width="3" height="3" rx="1" fill="#B2DFDB"/>
+  <!-- Wheels -->
+  <circle cx="9" cy="25" r="3" fill="#0D4040"/>
+  <circle cx="9" cy="25" r="1.5" fill="#1A6B6B"/>
+  <circle cx="19" cy="25" r="3" fill="#0D4040"/>
+  <circle cx="19" cy="25" r="1.5" fill="#1A6B6B"/>
+  <!-- Rail -->
+  <rect x="2" y="27" width="28" height="2" rx="1" fill="#555"/>
+</svg>

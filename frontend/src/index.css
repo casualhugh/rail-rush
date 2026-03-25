@@ -1,0 +1,44 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Design system tokens */
+  --color-paper:       #F5EFE0;
+  --color-teal:        #1A6B6B;
+  --color-orange:      #E8622A;
+  --color-amber:       #F0AC2B;
+  --color-white:       #FFFFFF;
+  --color-text:        #1C1C1C;
+  --color-text-muted:  #8A7F72;
+  --color-danger:      #C0392B;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui:      'DM Sans', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  font-family: var(--font-ui);
+  font-size: 16px;
+  color: var(--color-text);
+  background: var(--color-paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+input, textarea, select {
+  font-family: var(--font-ui);
+}
+
+/* MapLibre override — remove default outline */
+.maplibregl-canvas:focus { outline: none; }
+
+/* Prevent pull-to-refresh on mobile */
+body { overscroll-behavior: none; }

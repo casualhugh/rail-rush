@@ -1,0 +1,212 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 40;
+}
+
+.sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--color-paper);
+  border-radius: 16px 16px 0 0;
+  padding: 0.5rem 1.25rem 2rem;
+  z-index: 50;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.handle {
+  width: 36px; height: 4px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 2px;
+  margin: 0.5rem auto 1rem;
+}
+
+.stationHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stationName {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.ownerTag {
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.challengeBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(240,172,43,0.12);
+  border: 1.5px solid var(--color-amber);
+  border-radius: 10px;
+  padding: 0.75rem;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 1rem;
+  transition: background 0.15s;
+}
+.challengeBanner:hover { background: rgba(240,172,43,0.2); }
+
+.challengeTriangle {
+  font-size: 1.25rem;
+  color: var(--color-amber);
+  flex-shrink: 0;
+}
+
+.challengeBannerText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.875rem;
+}
+
+.challengeReward {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-amber);
+  font-weight: 600;
+}
+
+.challengeArrow { color: var(--color-text-muted); }
+
+.ownMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-teal);
+  font-weight: 600;
+  padding: 0.875rem;
+  background: rgba(26,107,107,0.08);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.actionLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.slider {
+  flex: 1;
+  accent-color: var(--color-teal);
+  height: 4px;
+}
+
+.sliderVal {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 4ch;
+  text-align: right;
+}
+
+.coinNote {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.cantAfford {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.primaryBtn {
+  background: var(--color-teal);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  width: 100%;
+  transition: opacity 0.15s;
+}
+.primaryBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.primaryBtn:hover:not(:disabled) { opacity: 0.9; }
+
+.divider {
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 0.25rem 0;
+}
+
+.tollBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  background: rgba(240,172,43,0.12);
+  border: 1.5px solid var(--color-amber);
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  width: 100%;
+  color: var(--color-text);
+  transition: background 0.15s;
+}
+.tollBtn:hover:not(:disabled) { background: rgba(240,172,43,0.2); }
+.tollBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.tollNote {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.closeBtn {
+  width: 100%;
+  background: none;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}

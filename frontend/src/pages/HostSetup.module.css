@@ -1,0 +1,399 @@
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--color-teal);
+  flex-shrink: 0;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.875rem;
+  padding: 0.4rem 0;
+}
+.backBtn:hover { color: #fff; }
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+}
+
+.stepIndicator {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  font-family: var(--font-mono);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.stepPanel {
+  padding: 1.5rem;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mapStep {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.mapInstructions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(0,0,0,0.04);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.stationCount {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-teal);
+}
+
+.mapContainer {
+  flex: 1;
+  min-height: 300px;
+  position: relative;
+}
+
+.mapPin { cursor: pointer; }
+.mapPinDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-teal);
+  border: 2.5px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.editOverlay {
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-top: 1.5px solid rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.editBtns {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stationList {
+  padding: 0.5rem 1rem;
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.stationItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.stepTitle {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
+.hint {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.input {
+  width: 100%;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input:focus { border-color: var(--color-teal); }
+
+.inputSm {
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  background: #fff;
+  outline: none;
+  width: 100%;
+}
+
+.textarea {
+  width: 100%;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  background: #fff;
+  outline: none;
+  resize: vertical;
+  font-family: var(--font-ui);
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.challengeForm {
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.challengeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.challengeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.challengeItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 0.75rem;
+  position: relative;
+}
+
+.challengeDesc { font-size: 0.9rem; font-weight: 500; }
+
+.challengeMeta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.teamRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.colorPicker {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.colorSwatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  transition: transform 0.1s;
+}
+.colorSwatch:hover { transform: scale(1.2); }
+
+.gameInviteBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border: 2px solid var(--color-teal);
+  border-radius: 12px;
+  padding: 1.25rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.gameInviteLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.gameInviteCode {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-teal);
+  letter-spacing: 0.2em;
+}
+
+.inviteCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fff;
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+}
+
+.inviteTeamDot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.inviteTeamName { flex: 1; font-weight: 600; }
+
+.inviteCode {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-teal);
+  letter-spacing: 0.12em;
+}
+
+/* Buttons */
+.nextBtn, .launchBtn {
+  width: 100%;
+  background: var(--color-teal);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  transition: opacity 0.15s;
+}
+.nextBtn:disabled, .launchBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.nextBtn:hover:not(:disabled), .launchBtn:hover:not(:disabled) { opacity: 0.9; }
+
+.launchBtn { background: var(--color-amber); color: var(--color-text); }
+
+.addBtn {
+  background: var(--color-teal);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.addBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.saveBtn {
+  background: var(--color-teal);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dangerBtn {
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  border-radius: 6px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  padding: 0.25rem;
+}
+.iconBtn:hover { color: var(--color-text); }
+
+.removeBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+/* Inline remove button for team rows (not positioned absolutely) */
+.teamRemoveBtn {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  padding: 0.25rem;
+}
+.teamRemoveBtn:hover { color: var(--color-danger); }
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
