@@ -42,6 +42,12 @@ export default function EventFeed({ onClose }: Props) {
           text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> claimed <strong>{stationName(s)}</strong> for {coins}🪙</>,
           className: styles.evClaim,
         }
+      case 'reinforce':
+        return {
+          icon: '🪙',
+          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> reinforced <strong>{stationName(s)}</strong> (+{coins}🪙)</>,
+          className: styles.evClaim,
+        }
       case 'contest':
         return {
           icon: '⚔️',
