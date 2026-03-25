@@ -203,6 +203,55 @@ routerAdd("POST", "/api/rr/station/{stationId}/toll", (e) => {
 });
 
 
+// GET /api/rr/station/{stationId}/ceiling
+// Returns the current stake and reinforce ceiling for the station's owning team.
+// Auth: caller must be an approved member of the owning team.
+// No teamId query param — owner is derived from the station record.
+routerAdd("GET", "/api/rr/station/{stationId}/ceiling", (e) => {
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const stationId = e.request.pathValue("stationId");
+
+  let station;
+  try { station = e.app.findRecordById("stations", stationId); }
+  catch (_) { throw new NotFoundError("station not found"); }
+
+  const ownerTeamId = station.get("current_owner_team_id");
+  if (!ownerTeamId) throw new BadRequestError("station is not owned by any team");
+
+  const ownerTeam = e.app.findRecordById("teams", ownerTeamId);
+  const game = e.app.findRecordById("games", station.get("game_id"));
+
+  // Game-scoping: owning team must belong to this station's game
+  if (ownerTeam.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
+
+  // Auth: caller must be an approved member of the owning team
+  const members = e.app.findRecordsByFilter(
+    "team_members",
+    "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true",
+    "", 1, 0,
+    { teamId: ownerTeamId, userId: authRecord.id }
+  );
+  if (!members || members.length === 0) throw new ForbiddenError("you are not an approved member of the owning team");
+
+  // Find the most recent initial_claim or contest_win (excludes reinforce rows)
+  // sorted by claimed_at DESC so the latest ownership event is first
+  const claims = e.app.findRecordsByFilter(
+    "station_claims",
+    "station_id = {:stationId} && (action = 'initial_claim' || action = 'contest_win')",
+    "-claimed_at", 1, 0,
+    { stationId }
+  );
+  if (!claims || claims.length === 0) throw new NotFoundError("no claim history found for this station");
+
+  const stakeCeiling = claims[0].get("stake_ceiling") || 0;
+  const currentStake = station.get("current_stake") || 0;
+
+  return e.json(200, { currentStake, stakeCeiling });
+});
+
+
 // POST /api/rr/game/{gameId}/stations
 // Body: array of { name, lat, lng } — saves station pins for this game.
 routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
