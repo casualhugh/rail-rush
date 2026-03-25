@@ -48,7 +48,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   const effectiveToll = Math.min(tollCost, myBalance)
   const isPartialToll = effectiveToll < tollCost
 
-  // Load ceiling when this is our own station. Empty [] — fires once on mount.
+  // Load ceiling when this is our own station. Re-fires if station changes.
   useEffect(() => {
     if (isOwn) loadCeiling()
   }, [station.id])
