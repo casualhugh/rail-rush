@@ -19,7 +19,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
   // Own-station ceiling state
   const [ceilingLoading, setCeilingLoading] = useState(false)
-  const [ceilingError, setCeilingError] = useState('')
+  const [ceilingError, setCeilingError] = useState<string | null>(null)
   const [stakeCeiling, setStakeCeiling] = useState<number | null>(null)
   const [reinforceCoins, setReinforceCoins] = useState(1)
 
@@ -54,7 +54,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   }, [])
 
   async function loadCeiling() {
-    setCeilingError('')
+    setCeilingError(null)
     setCeilingLoading(true)
     try {
       const data = await getStationCeiling(station.id)
@@ -154,28 +154,30 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
             {ceilingLoading && <p className={styles.coinNote}>Loading…</p>}
 
-            {ceilingError && (
+            {ceilingError !== null && (
               <div className={styles.actions}>
                 <p className={styles.error}>{ceilingError}</p>
                 <button className={styles.closeBtn} onClick={loadCeiling}>Retry</button>
+                <button className={styles.closeBtn} onClick={onClose}>Close</button>
               </div>
             )}
 
             {stakeCeiling !== null && currentStake < stakeCeiling && (
               <div className={styles.actions}>
+                <p className={styles.actionLabel}>{currentStake}🪙 staked · ceiling {stakeCeiling}🪙</p>
                 <p className={styles.actionLabel}>Reinforce</p>
                 <div className={styles.sliderRow}>
                   <input
                     type="range"
                     min={1}
-                    max={Math.min(stakeCeiling - currentStake, myBalance)}
+                    max={stakeCeiling! - currentStake}
                     value={reinforceCoins}
                     onChange={e => setReinforceCoins(+e.target.value)}
                     className={styles.slider}
                   />
                   <span className={styles.sliderVal}>{reinforceCoins}🪙</span>
                 </div>
-                <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
+                <p className={styles.coinNote}>Stake locked in</p>
                 <button
                   className={styles.primaryBtn}
                   onClick={doReinforce}
@@ -186,7 +188,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
               </div>
             )}
 
-            {stakeCeiling !== null && currentStake >= stakeCeiling && (
+            {stakeCeiling !== null && currentStake === stakeCeiling && (
               <p className={styles.reinforcedMsg}>Fully reinforced — {currentStake}🪙 staked</p>
             )}
           </>
