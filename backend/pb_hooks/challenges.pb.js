@@ -112,28 +112,57 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
 
   if (challenge.get("status") !== "active") throw new BadRequestError("challenge is not active");
 
-  const game = e.app.findRecordById("games", challenge.get("game_id"));
-  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
-
-  const attemptingTeamFail = challenge.get("attempting_team_id");
-  if (attemptingTeamFail && attemptingTeamFail !== teamId) {
+  // Guard: only the attempting team can fail
+  const attemptingTeam = challenge.get("attempting_team_id");
+  if (attemptingTeam && attemptingTeam !== teamId) {
     throw new ForbiddenError("another team is currently attempting this challenge");
   }
 
-  _clearChallengeFromStation(e.app, challenge);
+  const game = e.app.findRecordById("games", challenge.get("game_id"));
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
 
-  challenge.set("status", "failed");
-  challenge.set("completed_by_team_id", teamId);
-  challenge.set("completed_at", new Date().toISOString());
-  e.app.save(challenge);
+  // Escalate reward by 25%
+  const currentReward = challenge.get("coin_reward") || 0;
+  const newReward = Math.ceil(currentReward * 1.25);
+  const failCount = (challenge.get("fail_count") || 0) + 1;
+
+  // Track which teams have failed
+  const failedTeams = Array.isArray(challenge.get("failed_team_ids"))
+    ? challenge.get("failed_team_ids")
+    : [];
+  if (!failedTeams.includes(teamId)) failedTeams.push(teamId);
+
+  // Check if ALL teams in the game have failed → clear and redraw
+  const gameTeams = e.app.findRecordsByFilter("teams", "game_id = {:gid}", "", 0, 0, { gid: game.id });
+  const allFailed = gameTeams.every(t => failedTeams.includes(t.id));
 
   writeEvent(e.app, {
     gameId: game.id, type: "challenge_failed",
     teamId, challengeId, stationId: challenge.get("station_id") || "",
+    meta: { newReward, failCount },
   });
 
-  _drawChallenges(e.app, game);
-  return e.json(200, { ok: true });
+  if (allFailed) {
+    // Everyone has failed — clear and redraw
+    _clearChallengeFromStation(e.app, challenge);
+    challenge.set("status", "failed");
+    challenge.set("completed_by_team_id", teamId);
+    challenge.set("completed_at", new Date().toISOString());
+    challenge.set("attempting_team_id", "");
+    challenge.set("failed_team_ids", failedTeams);
+    challenge.set("fail_count", failCount);
+    e.app.save(challenge);
+    _drawChallenges(e.app, game);
+  } else {
+    // Keep challenge active with escalated reward and blocked team
+    challenge.set("coin_reward", newReward);
+    challenge.set("fail_count", failCount);
+    challenge.set("failed_team_ids", failedTeams);
+    challenge.set("attempting_team_id", "");
+    e.app.save(challenge);
+  }
+
+  return e.json(200, { ok: true, newReward: allFailed ? 0 : newReward, allFailed });
 });
 
 
