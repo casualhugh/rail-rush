@@ -1,5 +1,12 @@
 /// <reference path="../pb_data/types.d.ts" />
 
+function getFailedTeamIds(challenge) {
+  const raw = challenge.get("failed_team_ids");
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string" && raw) { try { return JSON.parse(raw); } catch (_) {} }
+  return [];
+}
+
 // POST /api/rr/challenge/{challengeId}/claim
 // Body: { teamId }
 routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
@@ -21,8 +28,8 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
 
   // Check team not blocked (in failed_team_ids)
-  const failedTeams = challenge.get("failed_team_ids") || [];
-  if (Array.isArray(failedTeams) && failedTeams.includes(teamId)) {
+  const failedTeams = getFailedTeamIds(challenge);
+  if (failedTeams.includes(teamId)) {
     throw new ForbiddenError("your team failed this challenge — wait for another team to attempt it first");
   }
 
@@ -38,7 +45,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
 
   // Claim: set attempting_team_id, clear failed_team_ids (unblocks previously failed teams)
   challenge.set("attempting_team_id", teamId);
-  challenge.set("failed_team_ids", []);
+  challenge.set("failed_team_ids", "[]");
   e.app.save(challenge);
 
   writeEvent(e.app, {
@@ -127,9 +134,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
   const failCount = (challenge.get("fail_count") || 0) + 1;
 
   // Track which teams have failed
-  const failedTeams = Array.isArray(challenge.get("failed_team_ids"))
-    ? challenge.get("failed_team_ids")
-    : [];
+  const failedTeams = getFailedTeamIds(challenge);
   if (!failedTeams.includes(teamId)) failedTeams.push(teamId);
 
   // Check if ALL teams in the game have failed → clear and redraw
@@ -149,7 +154,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
     challenge.set("completed_by_team_id", teamId);
     challenge.set("completed_at", new Date().toISOString());
     challenge.set("attempting_team_id", "");
-    challenge.set("failed_team_ids", failedTeams);
+    challenge.set("failed_team_ids", JSON.stringify(failedTeams));
     challenge.set("fail_count", failCount);
     e.app.save(challenge);
     _drawChallenges(e.app, game);
@@ -157,7 +162,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
     // Keep challenge active with escalated reward and blocked team
     challenge.set("coin_reward", newReward);
     challenge.set("fail_count", failCount);
-    challenge.set("failed_team_ids", failedTeams);
+    challenge.set("failed_team_ids", JSON.stringify(failedTeams));
     challenge.set("attempting_team_id", "");
     e.app.save(challenge);
   }

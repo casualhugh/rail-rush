@@ -289,6 +289,8 @@ routerAdd("GET", "/api/rr/game/{gameId}", (e) => {
       difficulty: c.get("difficulty"),
       status: c.get("status"),
       completedByTeamId: c.get("completed_by_team_id"),
+      attemptingTeamId: c.get("attempting_team_id") || null,
+      failedTeamIds: c.get("failed_team_ids") || [],
     })),
   });
 });

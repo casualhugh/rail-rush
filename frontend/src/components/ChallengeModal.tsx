@@ -16,7 +16,7 @@ const DIFF_COLOR: Record<string, string> = {
 }
 
 export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }: Props) {
-  const { game } = useGameStore()
+  const { game, patchChallenge } = useGameStore()
   const [loading, setLoading] = useState(false)
   const [claiming, setClaiming] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -38,7 +38,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
     setClaiming(true)
     try {
       await claimChallenge(challenge.id, myTeamId)
-      // challenge will update via SSE — modal will re-render showing attempt view
+      patchChallenge(challenge.id, { attemptingTeamId: myTeamId, failedTeamIds: [] })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to claim')
     } finally { setClaiming(false) }

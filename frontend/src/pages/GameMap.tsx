@@ -25,7 +25,7 @@ export default function GameMap() {
   const [myTeamId, setMyTeamId] = useState<string | null>(null)
   const [myTeamColor, setMyTeamColor] = useState('#1A6B6B')
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null)
   const [showFeed, setShowFeed] = useState(false)
   const [ending, setEnding] = useState(false)
 
@@ -229,7 +229,7 @@ const map = new maplibregl.Map({
       el.textContent = `▽${challenge.coinReward}`
       el.addEventListener('click', (e) => {
         e.stopPropagation()
-        setSelectedChallenge(challenge)
+        setSelectedChallengeId(challenge.id)
       })
       const marker = new maplibregl.Marker({ element: el, anchor: 'top-left', offset: [8, 8] })
         .setLngLat([station.lng, station.lat])
@@ -310,21 +310,25 @@ const map = new maplibregl.Map({
             tollCost={game.tollCost}
             maxStakeIncrement={game.maxStakeIncrement}
             onClose={() => setSelectedStationId(null)}
-            onChallengeOpen={(c) => { setSelectedChallenge(c); setSelectedStationId(null) }}
+            onChallengeOpen={(c) => { setSelectedChallengeId(c.id); setSelectedStationId(null) }}
           />
         ) : null
       })()
       }
 
       {/* Challenge modal */}
-      {selectedChallenge && myTeamId && (
-        <ChallengeModal
-          challenge={selectedChallenge}
-          myTeamId={myTeamId}
-          isHost={isHost}
-          onClose={() => setSelectedChallenge(null)}
-        />
-      )}
+      {selectedChallengeId && myTeamId && (() => {
+        const liveChallenge = store.challenges.find(c => c.id === selectedChallengeId)
+        if (!liveChallenge) return null
+        return (
+          <ChallengeModal
+            challenge={liveChallenge}
+            myTeamId={myTeamId}
+            isHost={isHost}
+            onClose={() => setSelectedChallengeId(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

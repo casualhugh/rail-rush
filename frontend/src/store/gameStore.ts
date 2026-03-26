@@ -109,6 +109,8 @@ interface GameStore {
   setMyTeamId: (teamId: string | null) => void
   reset: () => void
 
+  patchChallenge: (id: string, patch: Partial<Challenge>) => void
+
   // Real-time SSE handlers
   handleEvent: (record: Record<string, unknown>) => void
   updateTeam: (record: Record<string, unknown>) => void
@@ -191,6 +193,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setChallenges: (challenges) => set({ challenges }),
   setTeamMembers: (members) => set({ teamMembers: members }),
   setEventFeed: (items) => set({ eventFeed: items }),
+  patchChallenge: (id, patch) => set(s => ({
+    challenges: s.challenges.map(c => c.id === id ? { ...c, ...patch } : c),
+  })),
   setMyTeamId: (teamId) => set({ myTeamId: teamId }),
 
   reset: () => set({
