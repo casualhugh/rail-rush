@@ -48,8 +48,10 @@ export interface Challenge {
   description: string
   coinReward: number
   difficulty: 'easy' | 'medium' | 'hard'
-  status: 'undrawn' | 'active' | 'pending_approval' | 'completed' | 'failed'
+  status: 'undrawn' | 'active' | 'pending_approval' | 'completed' | 'failed' | 'impossible'
   completedByTeamId: string | null
+  attemptingTeamId: string | null
+  failedTeamIds: string[]
 }
 
 export interface TeamMember {
@@ -155,6 +157,8 @@ function recordToChallenge(r: Record<string, unknown>): Challenge {
     difficulty: (r.difficulty as Challenge['difficulty']) ?? 'medium',
     status: (r.status as Challenge['status']) ?? 'undrawn',
     completedByTeamId: (r.completed_by_team_id as string) || null,
+    attemptingTeamId: (r.attempting_team_id as string) || null,
+    failedTeamIds: Array.isArray(r.failed_team_ids) ? (r.failed_team_ids as string[]) : [],
   }
 }
 

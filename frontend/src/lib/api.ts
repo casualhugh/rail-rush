@@ -28,6 +28,8 @@ export interface GameState {
     id: string; stationId: string | null; description: string
     coinReward: number; difficulty: string; status: string
     completedByTeamId: string | null
+    attemptingTeamId?: string | null
+    failedTeamIds?: string[]
   }[]
 }
 
@@ -115,6 +117,9 @@ export const rejectChallenge = (challengeId: string, reason?: string) =>
 
 export const markChallengeImpossible = (challengeId: string) =>
   api.post<{ ok: boolean }>(`/api/rr/challenge/${challengeId}/impossible`)
+
+export const claimChallenge = (challengeId: string, teamId: string) =>
+  api.post<{ ok: boolean }>(`/api/rr/challenge/${challengeId}/claim`, { teamId })
 
 // ── Location ──────────────────────────────────────────────────────────────────
 

@@ -50,7 +50,7 @@ export default function GameMap() {
           expectedEndTime: string | null; startedAt: string | null; endedAt: string | null
           teams: Array<{ id: string; name: string; color: string; coinBalance: number; inviteCode: string; currentLat: number|null; currentLng: number|null }>
           stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; isChallengeLocation: boolean; activeChallengeId: string|null }>
-          challenges: Array<{ id: string; stationId: string|null; description: string; coinReward: number; difficulty: string; status: string; completedByTeamId: string|null }>
+          challenges: Array<{ id: string; stationId: string|null; description: string; coinReward: number; difficulty: string; status: string; completedByTeamId: string|null; attemptingTeamId?: string|null; failedTeamIds?: string[] }>
         }>(`/api/rr/game/${gid}`)
 
         if (cancelled) return
@@ -71,8 +71,10 @@ export default function GameMap() {
         store.setChallenges(data.challenges.map(c => ({
           ...c, gameId: gid,
           difficulty: c.difficulty as 'easy'|'medium'|'hard',
-          status: c.status as 'active'|'pending_approval',
+          status: c.status as Challenge['status'],
           completedByTeamId: c.completedByTeamId,
+          attemptingTeamId: c.attemptingTeamId ?? null,
+          failedTeamIds: c.failedTeamIds ?? [],
         })))
 
         // Load recent events to seed the feed
