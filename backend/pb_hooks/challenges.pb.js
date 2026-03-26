@@ -36,9 +36,8 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
     throw new BadRequestError("your team is already attempting another challenge — complete or fail it first");
   }
 
-  // Claim: set attempting_team_id, clear failed_team_ids (unblocks previously failed teams)
+  // Claim: set attempting_team_id (failed_team_ids intentionally preserved — teams stay blocked)
   challenge.set("attempting_team_id", teamId);
-  challenge.set("failed_team_ids", "[]");
   e.app.save(challenge);
 
   writeEvent(e.app, {

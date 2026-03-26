@@ -41,6 +41,11 @@ export default function HostSetup() {
   const stationsRef = useRef<StationPin[]>([])
   const [editingStation, setEditingStation] = useState<StationPin | null>(null)
   const [editName, setEditName] = useState('')
+  const [drawMode, setDrawMode] = useState<'pin' | 'polygon'>('pin')
+  const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([])
+  const polygonLayerRef = useRef<maplibregl.Marker[]>([])
+  const [osmLoading, setOsmLoading] = useState(false)
+  const drawModeRef = useRef<'pin' | 'polygon'>('pin')
 
   // Step 3
   const [startingCoins, setStartingCoins] = useState(25)
@@ -70,6 +75,7 @@ export default function HostSetup() {
 
   // Keep stationsRef in sync for use inside map click closure
   useEffect(() => { stationsRef.current = stations }, [stations])
+  useEffect(() => { drawModeRef.current = drawMode }, [drawMode])
 
   // Init map when step 2 is active
   useEffect(() => {
@@ -86,6 +92,16 @@ export default function HostSetup() {
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
 
     map.on('click', (e) => {
+      if (drawModeRef.current === 'polygon') {
+        const { lat, lng } = e.lngLat
+        const el = document.createElement('div')
+        el.className = styles.polygonVertex
+        const m = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map)
+        polygonLayerRef.current.push(m)
+        setPolygonPoints(pts => [...pts, [lat, lng]])
+        return
+      }
+
       const { lat, lng } = e.lngLat
       const tempId = crypto.randomUUID()
       const pin: StationPin = { name: `Station ${stationsRef.current.length + 1}`, lat, lng, tempId }
@@ -144,6 +160,51 @@ export default function HostSetup() {
     markersRef.current.delete(tempId)
     setStations(s => s.filter(p => p.tempId !== tempId))
     setEditingStation(null)
+  }
+
+  function clearPolygonMarkers() {
+    polygonLayerRef.current.forEach(m => m.remove())
+    polygonLayerRef.current = []
+  }
+
+  async function fetchOsmStations() {
+    setOsmLoading(true)
+    try {
+      const result = await api.post<{ stations: { id: string; name: string; lat: number; lng: number }[] }>(
+        '/api/rr/osm/stations',
+        { polygon: polygonPoints }
+      )
+      const newPins: StationPin[] = result.stations
+        .filter(s => !stations.some(existing =>
+          Math.abs(existing.lat - s.lat) < 0.0001 && Math.abs(existing.lng - s.lng) < 0.0001
+        ))
+        .map(s => ({ name: s.name, lat: s.lat, lng: s.lng, tempId: crypto.randomUUID() }))
+
+      for (const pin of newPins) {
+        const el = document.createElement('div')
+        el.className = styles.mapPin
+        const dot = document.createElement('div')
+        dot.className = styles.mapPinDot
+        el.appendChild(dot)
+        const marker = new maplibregl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(mapRef.current!)
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation()
+          const current = stationsRef.current.find(s => s.tempId === pin.tempId)
+          if (current) { setEditingStation(current); setEditName(current.name) }
+        })
+        markersRef.current.set(pin.tempId, marker)
+      }
+
+      setStations(s => [...s, ...newPins])
+      setDrawMode('pin')
+      setPolygonPoints([])
+      clearPolygonMarkers()
+      if (newPins.length === 0) alert('No railway stations found in that area. Try a larger polygon.')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to fetch OSM stations')
+    } finally {
+      setOsmLoading(false)
+    }
   }
 
   function addChallenge() {

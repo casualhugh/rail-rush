@@ -38,7 +38,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
     setClaiming(true)
     try {
       await claimChallenge(challenge.id, myTeamId)
-      patchChallenge(challenge.id, { attemptingTeamId: myTeamId, failedTeamIds: [] })
+      patchChallenge(challenge.id, { attemptingTeamId: myTeamId })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to claim')
     } finally { setClaiming(false) }
@@ -137,7 +137,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
         )}
 
         {/* Active challenge — non-host team actions */}
-        {isActive && !done && !isHost && (
+        {isActive && !done && !!myTeamId && (
           <>
             {isAttempting && (
               <div className={styles.actions}>
@@ -158,7 +158,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
               <p className={styles.otherTeamMsg}>Another team is currently attempting this challenge.</p>
             )}
             {isBlocked && !isOtherTeam && (
-              <p className={styles.errorMsg}>Your team failed this challenge. Wait for another team to attempt it before you can try again.</p>
+              <p className={styles.errorMsg}>Your team already failed this challenge and cannot attempt it again.</p>
             )}
             {!isAttempting && !isOtherTeam && !isBlocked && (
               <div className={styles.actions}>
