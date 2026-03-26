@@ -46,6 +46,7 @@ export default function HostSetup() {
   const polygonLayerRef = useRef<maplibregl.Marker[]>([])
   const [osmLoading, setOsmLoading] = useState(false)
   const drawModeRef = useRef<'pin' | 'polygon'>('pin')
+  const polygonPointsRef = useRef<[number, number][]>([])
 
   // Step 3
   const [startingCoins, setStartingCoins] = useState(25)
@@ -59,6 +60,8 @@ export default function HostSetup() {
   const [newReward, setNewReward] = useState(5)
   const [newDiff, setNewDiff] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [newPinnedStation, setNewPinnedStation] = useState('')
+  const [stationSearch, setStationSearch] = useState('')
+  const [stationDropdownOpen, setStationDropdownOpen] = useState(false)
 
   // Step 5
   const [teams, setTeams] = useState<TeamDraft[]>([
@@ -76,6 +79,7 @@ export default function HostSetup() {
   // Keep stationsRef in sync for use inside map click closure
   useEffect(() => { stationsRef.current = stations }, [stations])
   useEffect(() => { drawModeRef.current = drawMode }, [drawMode])
+  useEffect(() => { polygonPointsRef.current = polygonPoints }, [polygonPoints])
 
   // Init map when step 2 is active
   useEffect(() => {
@@ -84,12 +88,23 @@ export default function HostSetup() {
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: 'https://tiles.openfreemap.org/styles/positron',
-      center: [-0.118, 51.509],
+      center: [144.9632, -37.8142],
       zoom: 12,
     })
     mapRef.current = map
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
+
+    map.on('load', () => {
+      map.addSource('polygon-draw', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} },
+      })
+      map.addLayer({ id: 'polygon-draw-fill', type: 'fill', source: 'polygon-draw',
+        paint: { 'fill-color': '#7B3FA0', 'fill-opacity': 0.15 } })
+      map.addLayer({ id: 'polygon-draw-line', type: 'line', source: 'polygon-draw',
+        paint: { 'line-color': '#7B3FA0', 'line-width': 2, 'line-dasharray': [2, 1] } })
+    })
 
     map.on('click', (e) => {
       if (drawModeRef.current === 'polygon') {
@@ -98,7 +113,13 @@ export default function HostSetup() {
         el.className = styles.polygonVertex
         const m = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map)
         polygonLayerRef.current.push(m)
-        setPolygonPoints(pts => [...pts, [lat, lng]])
+        const newPts: [number, number][] = [...polygonPointsRef.current, [lat, lng]]
+        setPolygonPoints(newPts)
+        // Update polygon fill/outline on the map
+        const coords = newPts.map(p => [p[1], p[0]]) // [lng, lat] for MapLibre
+        const closed = newPts.length >= 3 ? [...coords, coords[0]] : coords
+        const src = map.getSource('polygon-draw') as maplibregl.GeoJSONSource
+        src?.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [closed] }, properties: {} })
         return
       }
 
@@ -165,6 +186,8 @@ export default function HostSetup() {
   function clearPolygonMarkers() {
     polygonLayerRef.current.forEach(m => m.remove())
     polygonLayerRef.current = []
+    const src = mapRef.current?.getSource('polygon-draw') as maplibregl.GeoJSONSource | undefined
+    src?.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} })
   }
 
   async function fetchOsmStations() {
@@ -219,6 +242,7 @@ export default function HostSetup() {
     setNewDesc('')
     setNewReward(5)
     setNewPinnedStation('')
+    setStationSearch('')
   }
 
   async function launch() {
@@ -306,6 +330,26 @@ export default function HostSetup() {
               <p>Tap the map to place stations. Tap a pin to rename or remove it.</p>
               <span className={styles.stationCount}>{stations.length} station{stations.length !== 1 ? 's' : ''}</span>
             </div>
+            <div className={styles.mapToolbar}>
+              <button
+                className={drawMode === 'pin' ? styles.toolActive : styles.tool}
+                onClick={() => { setDrawMode('pin'); setPolygonPoints([]); clearPolygonMarkers() }}
+              >📍 Place Pins</button>
+              <button
+                className={drawMode === 'polygon' ? styles.toolActive : styles.tool}
+                onClick={() => setDrawMode('polygon')}
+              >⬡ Draw Area</button>
+              {drawMode === 'polygon' && polygonPoints.length >= 3 && (
+                <button className={styles.toolAction} onClick={fetchOsmStations} disabled={osmLoading}>
+                  {osmLoading ? 'Searching…' : `Search OSM (${polygonPoints.length} pts)`}
+                </button>
+              )}
+              {drawMode === 'polygon' && polygonPoints.length > 0 && (
+                <button className={styles.toolClear} onClick={() => { setPolygonPoints([]); clearPolygonMarkers() }}>
+                  Clear Polygon
+                </button>
+              )}
+            </div>
             <div ref={mapContainerRef} className={styles.mapContainer} />
             {editingStation && (
               <div className={styles.editOverlay}>
@@ -321,7 +365,10 @@ export default function HostSetup() {
               {stations.map(p => (
                 <div key={p.tempId} className={styles.stationItem}>
                   <span>{p.name}</span>
-                  <button className={styles.iconBtn} onClick={() => { setEditingStation(p); setEditName(p.name) }}>✎</button>
+                  <div className={styles.stationItemBtns}>
+                    <button className={styles.iconBtn} onClick={() => { setEditingStation(p); setEditName(p.name) }}>✎</button>
+                    <button className={styles.iconBtnDanger} onClick={() => removeStation(p.tempId)}>✕</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -377,11 +424,33 @@ export default function HostSetup() {
                 </div>
                 <div>
                   <label className={styles.label}>Pin to station</label>
-                  <select className={styles.inputSm} value={newPinnedStation}
-                    onChange={e => setNewPinnedStation(e.target.value)}>
-                    <option value="">— random —</option>
-                    {stations.map(s => <option key={s.tempId} value={s.tempId}>{s.name}</option>)}
-                  </select>
+                  <div className={styles.stationSearchWrapper}>
+                    <input
+                      className={styles.inputSm}
+                      placeholder="— random —"
+                      value={stationSearch}
+                      onChange={e => { setStationSearch(e.target.value); setStationDropdownOpen(true) }}
+                      onFocus={() => setStationDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setStationDropdownOpen(false), 150)}
+                    />
+                    {stationDropdownOpen && (
+                      <div className={styles.stationDropdown}>
+                        <div className={styles.stationDropdownItem}
+                          onMouseDown={() => { setNewPinnedStation(''); setStationSearch(''); setStationDropdownOpen(false) }}>
+                          — random —
+                        </div>
+                        {stations
+                          .filter(s => s.name.toLowerCase().includes(stationSearch.toLowerCase()))
+                          .map(s => (
+                            <div key={s.tempId} className={styles.stationDropdownItem}
+                              onMouseDown={() => { setNewPinnedStation(s.tempId); setStationSearch(s.name); setStationDropdownOpen(false) }}>
+                              {s.name}
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <button className={styles.addBtn} onClick={addChallenge} disabled={!newDesc.trim()}>

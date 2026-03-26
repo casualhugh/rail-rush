@@ -32,23 +32,23 @@ routerAdd("POST", "/api/rr/osm/stations", (e) => {
   const query = `[out:json][timeout:10];(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}"););out;`;
 
   let stations = [];
+  const resp = $http.send({
+    url: "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query),
+    method: "GET",
+    timeout: 20,
+  });
+  if (resp.statusCode !== 200 || !resp.json) {
+    throw new BadRequestError("OSM returned status " + resp.statusCode + ": " + toString(resp.body));
+  }
   try {
-    const resp = $http.send({
-      url: "https://overpass-api.de/api/interpreter",
-      method: "POST",
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      timeout: 15,
-    });
-    const data = resp.json();
-    stations = (data.elements || []).map(n => ({
+    stations = (resp.json.elements || []).map(n => ({
       id: `osm:${n.id}`,
       name: n.tags?.name || n.tags?.["name:en"] || "Unnamed Station",
       lat: n.lat,
       lng: n.lon,
     }));
   } catch (err) {
-    throw new BadRequestError("Failed to fetch from OSM: " + err.message);
+    throw new BadRequestError("Failed to parse OSM response: " + err.message);
   }
 
   // Cache the result

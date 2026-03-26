@@ -199,6 +199,31 @@
   gap: 0.75rem;
 }
 
+.stationSearchWrapper {
+  position: relative;
+}
+
+.stationDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  border-radius: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stationDropdownItem {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.stationDropdownItem:hover { background: #f0f0f0; }
+
 .challengeRow {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -363,6 +388,12 @@
   font-size: 0.875rem;
 }
 
+.stationItemBtns {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
 .iconBtn {
   background: none;
   border: none;
@@ -371,6 +402,15 @@
   padding: 0.25rem;
 }
 .iconBtn:hover { color: var(--color-text); }
+
+.iconBtnDanger {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  padding: 0.25rem;
+}
+.iconBtnDanger:hover { color: var(--color-danger); }
 
 .removeBtn {
   position: absolute;
