@@ -118,4 +118,11 @@ function _completeChallengeAndDraw(app, challenge, game, teamId) {
   _drawChallenges(app, game);
 }
 
-module.exports = { writeEvent, _clearChallengeFromStation, _drawChallenges, _completeChallengeAndDraw };
+function getFailedTeamIds(challenge) {
+  const raw = challenge.get("failed_team_ids");
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string" && raw) { try { return JSON.parse(raw); } catch (_) {} }
+  return [];
+}
+
+module.exports = { writeEvent, _clearChallengeFromStation, _drawChallenges, _completeChallengeAndDraw, getFailedTeamIds };

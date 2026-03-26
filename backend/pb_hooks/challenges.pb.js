@@ -1,16 +1,9 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-function getFailedTeamIds(challenge) {
-  const raw = challenge.get("failed_team_ids");
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string" && raw) { try { return JSON.parse(raw); } catch (_) {} }
-  return [];
-}
-
 // POST /api/rr/challenge/{challengeId}/claim
 // Body: { teamId }
 routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
-  const { writeEvent } = require(`${__hooks}/shared.js`);
+  const { writeEvent, getFailedTeamIds } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
@@ -105,7 +98,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/complete", (e) => {
 // POST /api/rr/challenge/{challengeId}/fail
 // Body: { teamId }
 routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
-  const { writeEvent, _clearChallengeFromStation, _drawChallenges } = require(`${__hooks}/shared.js`);
+  const { writeEvent, _clearChallengeFromStation, _drawChallenges, getFailedTeamIds } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
