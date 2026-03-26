@@ -166,6 +166,40 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
 });
 
 
+// POST /api/rr/challenge/{challengeId}/impossible  (host only)
+routerAdd("POST", "/api/rr/challenge/{challengeId}/impossible", (e) => {
+  const { writeEvent, _clearChallengeFromStation, _drawChallenges } = require(`${__hooks}/shared.js`);
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const challengeId = e.request.pathValue("challengeId");
+
+  let challenge;
+  try { challenge = e.app.findRecordById("challenges", challengeId); }
+  catch (_) { throw new NotFoundError("challenge not found"); }
+
+  const game = e.app.findRecordById("games", challenge.get("game_id"));
+  if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can mark challenges impossible");
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  const stationId = challenge.get("station_id") || "";
+
+  _clearChallengeFromStation(e.app, challenge);
+  challenge.set("status", "impossible");
+  challenge.set("attempting_team_id", "");
+  challenge.set("completed_at", new Date().toISOString());
+  e.app.save(challenge);
+
+  writeEvent(e.app, {
+    gameId: game.id, type: "challenge_impossible",
+    challengeId, stationId,
+  });
+
+  _drawChallenges(e.app, game);
+  return e.json(200, { ok: true });
+});
+
+
 // POST /api/rr/challenge/{challengeId}/approve  (host only)
 routerAdd("POST", "/api/rr/challenge/{challengeId}/approve", (e) => {
   const { _completeChallengeAndDraw } = require(`${__hooks}/shared.js`);

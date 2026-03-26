@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/pb'
+import { markChallengeImpossible } from '../lib/api'
 import { useGameStore, type Challenge } from '../store/gameStore'
 import styles from './ChallengeModal.module.css'
 
@@ -21,6 +22,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [markingImpossible, setMarkingImpossible] = useState(false)
 
   const isPending  = challenge.status === 'pending_approval'
   const isActive   = challenge.status === 'active'
@@ -58,6 +60,17 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to approve')
     } finally { setLoading(false) }
+  }
+
+  async function doMarkImpossible() {
+    if (!window.confirm('Mark this challenge as impossible and remove it?')) return
+    setMarkingImpossible(true)
+    try {
+      await markChallengeImpossible(challenge.id)
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed')
+    } finally { setMarkingImpossible(false) }
   }
 
   async function doReject() {
@@ -117,6 +130,11 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
                 <button className={styles.failBtn} onClick={doFail} disabled={loading}>
                   Mark Failed
                 </button>
+                {isHost && (
+                  <button className={styles.impossibleBtn} onClick={doMarkImpossible} disabled={markingImpossible}>
+                    {markingImpossible ? '…' : 'Mark Impossible'}
+                  </button>
+                )}
               </>
             )}
           </div>

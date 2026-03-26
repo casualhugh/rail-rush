@@ -92,6 +92,18 @@ export default function EventFeed({ onClose }: Props) {
           text: <>Challenge rejected for <span style={{ color: teamColor(t) }}>{teamName(t)}</span></>,
           className: styles.evFailed,
         }
+      case 'challenge_impossible':
+        return {
+          icon: '🚫',
+          text: <>Host removed challenge at <strong>{stationName(s) || '(no station)'}</strong> as impossible</>,
+          className: styles.evFailed,
+        }
+      case 'challenge_claimed':
+        return {
+          icon: '🎯',
+          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> is attempting challenge at <strong>{stationName(s)}</strong></>,
+          className: styles.evChallenge,
+        }
       case 'player_joined':
         return {
           icon: '👋',

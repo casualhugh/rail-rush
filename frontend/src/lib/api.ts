@@ -113,6 +113,9 @@ export const approveChallenge = (challengeId: string) =>
 export const rejectChallenge = (challengeId: string, reason?: string) =>
   api.post<{ ok: boolean }>(`/api/rr/challenge/${challengeId}/reject`, { reason: reason ?? '' })
 
+export const markChallengeImpossible = (challengeId: string) =>
+  api.post<{ ok: boolean }>(`/api/rr/challenge/${challengeId}/impossible`)
+
 // ── Location ──────────────────────────────────────────────────────────────────
 
 export const updateLocation = (teamId: string, lat: number, lng: number) =>

@@ -210,6 +210,17 @@
   margin-top: 0.5rem;
 }
 
+.impossibleBtn {
+  background: #666;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
 .error {
   color: var(--color-danger);
   font-size: 0.875rem;
