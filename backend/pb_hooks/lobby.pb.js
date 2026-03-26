@@ -54,7 +54,8 @@ routerAdd("POST", "/api/rr/game/{gameId}/join", (e) => {
   member.set("user_id",          authRecord.id);
   member.set("display_name",     displayName);
   member.set("role",             "member");
-  member.set("approved_by_host", false);
+  const isHost = authRecord.id === game.get("host_user_id");
+  member.set("approved_by_host", isHost);
   member.set("joined_at",        new Date().toISOString());
   e.app.save(member);
 

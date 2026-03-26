@@ -75,6 +75,31 @@ export default function GameMap() {
           completedByTeamId: c.completedByTeamId,
         })))
 
+        // Load recent events to seed the feed
+        try {
+          const eventsRes = await pb.collection('events').getList(1, 50, {
+            filter: `game_id = "${gid}"`,
+            sort: '-created',
+            requestKey: null,
+          })
+          if (!cancelled) {
+            store.setEventFeed(eventsRes.items.map(r => ({
+              id: r.id,
+              type: r['type'] as string,
+              teamId: (r['team_id'] as string) || null,
+              secondaryTeamId: (r['secondary_team_id'] as string) || null,
+              stationId: (r['station_id'] as string) || null,
+              challengeId: (r['challenge_id'] as string) || null,
+              coinsInvolved: (r['coins_involved'] as number) ?? null,
+              wasPartial: (r['was_partial'] as boolean) ?? null,
+              meta: (r['meta'] as Record<string, unknown>) ?? null,
+              created: r['created'] as string,
+            })))
+          }
+        } catch (_) {
+          // non-fatal — feed will still update via SSE
+        }
+
         // Find my team — cross-reference approved memberships with this game's team IDs
         const gameTeamIds = new Set(data.teams.map(t => t.id))
         const memberRecs = await pb.collection('team_members').getList(1, 50, {
@@ -188,26 +213,34 @@ const map = new maplibregl.Map({
         markerMapRef.current.set(station.id, marker)
       }
 
-      // Challenge badge
-      const challenge = challenges.find(c => c.id === station.activeChallengeId && c.status === 'active')
-      if (challenge) {
-        if (!challengeMarkerMapRef.current.has(challenge.id)) {
-          const el = document.createElement('div')
-          el.className = styles.challengeBadge
-          el.textContent = `▽${challenge.coinReward}`
-          el.addEventListener('click', (e) => {
-            e.stopPropagation()
-            setSelectedChallenge(challenge)
-          })
-          const marker = new maplibregl.Marker({ element: el, anchor: 'top-left', offset: [8, 8] })
-            .setLngLat([station.lng, station.lat])
-            .addTo(map)
-          challengeMarkerMapRef.current.set(challenge.id, marker)
-        }
-      } else {
-        // Remove stale challenge badge
-        const badge = challengeMarkerMapRef.current.get(station.activeChallengeId ?? '')
-        if (badge) { badge.remove(); challengeMarkerMapRef.current.delete(station.activeChallengeId ?? '') }
+    }
+
+    // Challenge badges — driven from active challenges so new draws appear
+    // as soon as the challenge SSE arrives (no need to wait for station update too)
+    const activeChallenges = challenges.filter(c => c.status === 'active' && c.stationId)
+    for (const challenge of activeChallenges) {
+      if (challengeMarkerMapRef.current.has(challenge.id)) continue
+      const station = stations.find(s => s.id === challenge.stationId)
+      if (!station || station.lat == null || station.lng == null) continue
+      const el = document.createElement('div')
+      el.className = styles.challengeBadge
+      el.textContent = `▽${challenge.coinReward}`
+      el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        setSelectedChallenge(challenge)
+      })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'top-left', offset: [8, 8] })
+        .setLngLat([station.lng, station.lat])
+        .addTo(map)
+      challengeMarkerMapRef.current.set(challenge.id, marker)
+    }
+
+    // Remove badges for challenges that are no longer active
+    const activeChallengeIds = new Set(activeChallenges.map(c => c.id))
+    for (const [cid, marker] of challengeMarkerMapRef.current) {
+      if (!activeChallengeIds.has(cid)) {
+        marker.remove()
+        challengeMarkerMapRef.current.delete(cid)
       }
     }
   }

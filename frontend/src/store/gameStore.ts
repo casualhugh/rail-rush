@@ -103,6 +103,7 @@ interface GameStore {
   setStations: (stations: Station[]) => void
   setChallenges: (challenges: Challenge[]) => void
   setTeamMembers: (members: TeamMember[]) => void
+  setEventFeed: (items: EventFeedItem[]) => void
   setMyTeamId: (teamId: string | null) => void
   reset: () => void
 
@@ -185,6 +186,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setStations: (stations) => set({ stations }),
   setChallenges: (challenges) => set({ challenges }),
   setTeamMembers: (members) => set({ teamMembers: members }),
+  setEventFeed: (items) => set({ eventFeed: items }),
   setMyTeamId: (teamId) => set({ myTeamId: teamId }),
 
   reset: () => set({
