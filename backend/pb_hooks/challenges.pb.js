@@ -1,108 +1,59 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-function _clearChallengeFromStation(app, challenge) {
-  const stationId = challenge.get("station_id");
-  if (!stationId) return;
-  try {
-    const station = app.findRecordById("stations", stationId);
-    station.set("is_challenge_location", false);
-    station.set("active_challenge_id", "");
-    app.save(station);
-  } catch (_) {}
-}
-
-function _drawChallenges(app, game) {
+// POST /api/rr/challenge/{challengeId}/claim
+// Body: { teamId }
+routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
   const { writeEvent } = require(`${__hooks}/shared.js`);
-  const gameId = game.id;
-  const maxActive = game.get("max_active_challenges") || 10;
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
-  const activeCount = app.findRecordsByFilter(
-    "challenges", "game_id = {:gameId} && status = 'active'", "", 0, 0, { gameId }
-  ).length;
+  const challengeId = e.request.pathValue("challengeId");
+  const { teamId } = e.requestInfo().body;
+  if (!teamId) throw new BadRequestError("teamId is required");
 
-  const drawCount = activeCount >= maxActive ? 1 : 2;
+  let challenge;
+  try { challenge = e.app.findRecordById("challenges", challengeId); }
+  catch (_) { throw new NotFoundError("challenge not found"); }
 
-  const pool = app.findRecordsByFilter(
-    "challenges", "game_id = {:gameId} && status = 'undrawn'", "", 0, 0, { gameId }
-  );
-  if (pool.length === 0) return;
+  if (challenge.get("status") !== "active") throw new BadRequestError("challenge is not active");
 
-  const availableStations = app.findRecordsByFilter(
-    "stations",
-    "game_id = {:gameId} && (active_challenge_id = '' || active_challenge_id = null)",
-    "", 0, 0, { gameId }
-  );
+  const game = e.app.findRecordById("games", challenge.get("game_id"));
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
 
-  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  const toDraw = shuffled.slice(0, Math.min(drawCount, pool.length));
-
-  for (const challenge of toDraw) {
-    let targetStation = null;
-
-    const pinnedStationId = challenge.get("station_id");
-    if (pinnedStationId) {
-      const idx = availableStations.findIndex(s => s.id === pinnedStationId);
-      if (idx !== -1) {
-        targetStation = availableStations.splice(idx, 1)[0];
-      }
-    }
-
-    if (!targetStation && availableStations.length > 0) {
-      const idx = Math.floor(Math.random() * availableStations.length);
-      targetStation = availableStations.splice(idx, 1)[0];
-    }
-
-    challenge.set("status", "active");
-    if (targetStation) {
-      challenge.set("station_id", targetStation.id);
-      app.save(challenge);
-      targetStation.set("is_challenge_location", true);
-      targetStation.set("active_challenge_id", challenge.id);
-      app.save(targetStation);
-    } else {
-      app.save(challenge);
-    }
-
-    writeEvent(app, {
-      gameId, type: "challenge_drawn",
-      challengeId: challenge.id,
-      stationId: targetStation ? targetStation.id : "",
-    });
-  }
-}
-
-function _completeChallengeAndDraw(app, challenge, game, teamId) {
-  const { writeEvent } = require(`${__hooks}/shared.js`);
-  const coinReward = challenge.get("coin_reward") || 0;
-
-  _clearChallengeFromStation(app, challenge);
-
-  challenge.set("status", "completed");
-  challenge.set("completed_by_team_id", teamId);
-  challenge.set("completed_at", new Date().toISOString());
-  app.save(challenge);
-
-  if (coinReward > 0 && teamId) {
-    const team = app.findRecordById("teams", teamId);
-    team.set("coin_balance", (team.get("coin_balance") || 0) + coinReward);
-    app.save(team);
+  // Check team not blocked (in failed_team_ids)
+  const failedTeams = challenge.get("failed_team_ids") || [];
+  if (Array.isArray(failedTeams) && failedTeams.includes(teamId)) {
+    throw new ForbiddenError("your team failed this challenge — wait for another team to attempt it first");
   }
 
-  writeEvent(app, {
-    gameId: game.id, type: "challenge_approved",
-    teamId, challengeId: challenge.id,
-    stationId: challenge.get("station_id") || "",
-    coinsInvolved: coinReward,
+  // Check team doesn't already have an active challenge claimed
+  const existingClaim = e.app.findRecordsByFilter(
+    "challenges",
+    "game_id = {:gameId} && attempting_team_id = {:teamId} && status = 'active'",
+    "", 1, 0, { gameId: game.id, teamId }
+  );
+  if (existingClaim.length > 0) {
+    throw new BadRequestError("your team is already attempting another challenge — complete or fail it first");
+  }
+
+  // Claim: set attempting_team_id, clear failed_team_ids (unblocks previously failed teams)
+  challenge.set("attempting_team_id", teamId);
+  challenge.set("failed_team_ids", []);
+  e.app.save(challenge);
+
+  writeEvent(e.app, {
+    gameId: game.id, type: "challenge_claimed",
+    teamId, challengeId, stationId: challenge.get("station_id") || "",
   });
 
-  _drawChallenges(app, game);
-}
+  return e.json(200, { ok: true });
+});
 
 
 // POST /api/rr/challenge/{challengeId}/complete
 // Body: { teamId }
 routerAdd("POST", "/api/rr/challenge/{challengeId}/complete", (e) => {
-  const { writeEvent } = require(`${__hooks}/shared.js`);
+  const { writeEvent, _completeChallengeAndDraw } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
@@ -119,6 +70,11 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/complete", (e) => {
 
   const game = e.app.findRecordById("games", challenge.get("game_id"));
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  const attemptingTeamComplete = challenge.get("attempting_team_id");
+  if (attemptingTeamComplete && attemptingTeamComplete !== teamId) {
+    throw new ForbiddenError("another team is currently attempting this challenge");
+  }
 
   if (game.get("require_host_approval")) {
     challenge.set("status", "pending_approval");
@@ -142,7 +98,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/complete", (e) => {
 // POST /api/rr/challenge/{challengeId}/fail
 // Body: { teamId }
 routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
-  const { writeEvent } = require(`${__hooks}/shared.js`);
+  const { writeEvent, _clearChallengeFromStation, _drawChallenges } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
@@ -158,6 +114,11 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
 
   const game = e.app.findRecordById("games", challenge.get("game_id"));
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  const attemptingTeamFail = challenge.get("attempting_team_id");
+  if (attemptingTeamFail && attemptingTeamFail !== teamId) {
+    throw new ForbiddenError("another team is currently attempting this challenge");
+  }
 
   _clearChallengeFromStation(e.app, challenge);
 
@@ -178,6 +139,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
 
 // POST /api/rr/challenge/{challengeId}/approve  (host only)
 routerAdd("POST", "/api/rr/challenge/{challengeId}/approve", (e) => {
+  const { _completeChallengeAndDraw } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 

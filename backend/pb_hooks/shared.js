@@ -16,4 +16,106 @@ function writeEvent(app, { gameId, type, teamId = "", secondaryTeamId = "", stat
   return record;
 }
 
-module.exports = { writeEvent };
+function _clearChallengeFromStation(app, challenge) {
+  const stationId = challenge.get("station_id");
+  if (!stationId) return;
+  try {
+    const station = app.findRecordById("stations", stationId);
+    station.set("is_challenge_location", false);
+    station.set("active_challenge_id", "");
+    app.save(station);
+  } catch (_) {}
+}
+
+function _drawChallenges(app, game) {
+  const gameId = game.id;
+  const maxActive = game.get("max_active_challenges") || 10;
+
+  const activeCount = app.findRecordsByFilter(
+    "challenges", "game_id = {:gameId} && status = 'active'", "", 0, 0, { gameId }
+  ).length;
+
+  const drawCount = activeCount >= maxActive ? 1 : 2;
+
+  const pool = app.findRecordsByFilter(
+    "challenges", "game_id = {:gameId} && status = 'undrawn'", "", 0, 0, { gameId }
+  );
+  if (pool.length === 0) return;
+
+  const availableStations = app.findRecordsByFilter(
+    "stations",
+    "game_id = {:gameId} && (active_challenge_id = '' || active_challenge_id = null)",
+    "", 0, 0, { gameId }
+  );
+
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  const toDraw = shuffled.slice(0, Math.min(drawCount, pool.length));
+
+  for (const challenge of toDraw) {
+    let targetStation = null;
+    const pinnedStationId = challenge.get("station_id");
+    if (pinnedStationId) {
+      const idx = availableStations.findIndex(s => s.id === pinnedStationId);
+      if (idx !== -1) targetStation = availableStations.splice(idx, 1)[0];
+    }
+    if (!targetStation && availableStations.length > 0) {
+      const idx = Math.floor(Math.random() * availableStations.length);
+      targetStation = availableStations.splice(idx, 1)[0];
+    }
+    challenge.set("status", "active");
+    if (targetStation) {
+      challenge.set("station_id", targetStation.id);
+      app.save(challenge);
+      targetStation.set("is_challenge_location", true);
+      targetStation.set("active_challenge_id", challenge.id);
+      app.save(targetStation);
+    } else {
+      app.save(challenge);
+    }
+    writeEvent(app, {
+      gameId, type: "challenge_drawn",
+      challengeId: challenge.id,
+      stationId: targetStation ? targetStation.id : "",
+    });
+  }
+}
+
+function _completeChallengeAndDraw(app, challenge, game, teamId) {
+  const baseCoinReward = challenge.get("coin_reward") || 0;
+
+  // Count-based bonus: +5% per challenge already completed in this game, capped at +200%
+  let coinReward = baseCoinReward;
+  if (baseCoinReward > 0) {
+    const completedCount = app.findRecordsByFilter(
+      "challenges", "game_id = {:gameId} && status = 'completed'", "", 0, 0, { gameId: game.id }
+    ).length;
+    const bonusFraction = Math.min(completedCount * 0.05, 2.0);
+    const bonus = Math.floor(baseCoinReward * bonusFraction);
+    coinReward = baseCoinReward + bonus;
+  }
+
+  _clearChallengeFromStation(app, challenge);
+
+  challenge.set("status", "completed");
+  challenge.set("completed_by_team_id", teamId);
+  challenge.set("completed_at", new Date().toISOString());
+  challenge.set("attempting_team_id", "");
+  app.save(challenge);
+
+  if (coinReward > 0 && teamId) {
+    const team = app.findRecordById("teams", teamId);
+    team.set("coin_balance", (team.get("coin_balance") || 0) + coinReward);
+    app.save(team);
+  }
+
+  writeEvent(app, {
+    gameId: game.id, type: "challenge_approved",
+    teamId, challengeId: challenge.id,
+    stationId: challenge.get("station_id") || "",
+    coinsInvolved: coinReward,
+  });
+
+  _drawChallenges(app, game);
+}
+
+module.exports = { writeEvent, _clearChallengeFromStation, _drawChallenges, _completeChallengeAndDraw };
