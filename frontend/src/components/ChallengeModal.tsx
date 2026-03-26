@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/pb'
-import { markChallengeImpossible } from '../lib/api'
+import { markChallengeImpossible, claimChallenge } from '../lib/api'
 import { useGameStore, type Challenge } from '../store/gameStore'
 import styles from './ChallengeModal.module.css'
 
@@ -18,23 +18,38 @@ const DIFF_COLOR: Record<string, string> = {
 export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }: Props) {
   const { game } = useGameStore()
   const [loading, setLoading] = useState(false)
+  const [claiming, setClaiming] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [error, setError] = useState('')
-  const [done, setDone] = useState(false)
   const [markingImpossible, setMarkingImpossible] = useState(false)
 
-  const isPending  = challenge.status === 'pending_approval'
-  const isActive   = challenge.status === 'active'
+  const isPending     = challenge.status === 'pending_approval'
+  const isActive      = challenge.status === 'active'
+  const done          = challenge.status === 'completed' || challenge.status === 'impossible'
+  const isAttempting  = challenge.attemptingTeamId === myTeamId
+  const isOtherTeam   = !!challenge.attemptingTeamId && challenge.attemptingTeamId !== myTeamId
+  const isBlocked     = challenge.failedTeamIds.includes(myTeamId)
+  const canSeeDetails = isAttempting || isHost
   const requireApproval = game?.requireHostApproval
+
+  async function doClaim() {
+    setError('')
+    setClaiming(true)
+    try {
+      await claimChallenge(challenge.id, myTeamId)
+      // challenge will update via SSE — modal will re-render showing attempt view
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to claim')
+    } finally { setClaiming(false) }
+  }
 
   async function doComplete() {
     setError('')
     setLoading(true)
     try {
       await api.post(`/api/rr/challenge/${challenge.id}/complete`, { teamId: myTeamId })
-      setDone(true)
-      setTimeout(onClose, 1200)
+      if (!requireApproval) setTimeout(onClose, 1200)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed')
     } finally { setLoading(false) }
@@ -101,7 +116,14 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
           </div>
         </div>
 
-        <p className={styles.description}>{challenge.description}</p>
+        {canSeeDetails && (
+          <p className={styles.description}>{challenge.description}</p>
+        )}
+        {!canSeeDetails && isActive && (
+          <p className={styles.description} style={{ filter: 'blur(4px)', userSelect: 'none' }}>
+            {'█'.repeat(Math.min(challenge.description.length, 80))}
+          </p>
+        )}
 
         {error && <p className={styles.error}>{error}</p>}
 
@@ -114,11 +136,11 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
           </div>
         )}
 
-        {/* Active challenge — team actions */}
-        {isActive && !done && (
-          <div className={styles.actions}>
-            {isPending ? null : (
-              <>
+        {/* Active challenge — non-host team actions */}
+        {isActive && !done && !isHost && (
+          <>
+            {isAttempting && (
+              <div className={styles.actions}>
                 <button className={styles.completeBtn} onClick={doComplete} disabled={loading}>
                   {loading ? '…' : 'Mark Complete'}
                 </button>
@@ -130,13 +152,31 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
                 <button className={styles.failBtn} onClick={doFail} disabled={loading}>
                   Mark Failed
                 </button>
-                {isHost && (
-                  <button className={styles.impossibleBtn} onClick={doMarkImpossible} disabled={markingImpossible}>
-                    {markingImpossible ? '…' : 'Mark Impossible'}
-                  </button>
-                )}
-              </>
+              </div>
             )}
+            {isOtherTeam && (
+              <p className={styles.otherTeamMsg}>Another team is currently attempting this challenge.</p>
+            )}
+            {isBlocked && !isOtherTeam && (
+              <p className={styles.errorMsg}>Your team failed this challenge. Wait for another team to attempt it before you can try again.</p>
+            )}
+            {!isAttempting && !isOtherTeam && !isBlocked && (
+              <div className={styles.actions}>
+                <p className={styles.actionHint}>Claim this challenge to attempt it. You can only attempt one challenge at a time.</p>
+                <button className={styles.completeBtn} onClick={doClaim} disabled={claiming}>
+                  {claiming ? '…' : `Claim — +${challenge.coinReward}🪙`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Host active — mark impossible */}
+        {isActive && isHost && (
+          <div className={styles.actions}>
+            <button className={styles.impossibleBtn} onClick={doMarkImpossible} disabled={markingImpossible}>
+              {markingImpossible ? '…' : 'Mark Impossible'}
+            </button>
           </div>
         )}
 
