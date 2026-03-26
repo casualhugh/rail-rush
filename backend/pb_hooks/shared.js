@@ -119,9 +119,25 @@ function _completeChallengeAndDraw(app, challenge, game, teamId) {
 }
 
 function getFailedTeamIds(challenge) {
-  const raw = challenge.get("failed_team_ids");
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string" && raw) { try { return JSON.parse(raw); } catch (_) {} }
+  try {
+    const raw = challenge.get("failed_team_ids");
+    if (raw === null || raw === undefined) return [];
+    // Goja returns types.JsonRaw (Go []byte) as an array of byte integers
+    // Convert bytes → string → JSON.parse
+    let str;
+    if (typeof raw === "string") {
+      str = raw;
+    } else if (Array.isArray(raw)) {
+      str = String.fromCharCode(...raw.filter(b => b > 0));
+    } else {
+      return [];
+    }
+    str = str.trim();
+    if (!str || str === "null" || str === "[]") return [];
+    const parsed = JSON.parse(str);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(id => typeof id === "string");
+  } catch (_) {}
   return [];
 }
 
