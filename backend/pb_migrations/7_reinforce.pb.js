@@ -4,11 +4,7 @@ migrate((app) => {
   // ── station_claims: add stake_ceiling (nullable number) + reinforce action ─
   const claimsCol = app.findCollectionByNameOrId("station_claims");
 
-  claimsCol.fields.add({
-    name: "stake_ceiling",
-    type: "number",      // must be "number", not "text"
-    required: false,     // nullable — legacy rows default to null
-  });
+  claimsCol.fields.add(new NumberField({ name: "stake_ceiling", required: false }));
 
   const actionField = claimsCol.fields.getByName("action");
   actionField.values = ["initial_claim", "contest_win", "reinforce"];
