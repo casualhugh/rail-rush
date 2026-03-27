@@ -1,7 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // POST /api/rr/game
-// Body: { name, expectedEndTime, startingCoins, maxStakeIncrement, tollCost,
+// Body: { name, startingCoins, maxStakeIncrement, tollCost,
 //         maxActiveChallenges, requireHostApproval, spectatorsAllowed, cityName,
 //         teams: [{name, color}] }
 routerAdd("POST", "/api/rr/game", (e) => {
