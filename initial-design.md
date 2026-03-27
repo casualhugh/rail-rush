@@ -52,11 +52,11 @@
 
 ### 2.3 Challenges
 
-- At game start, **3 challenges** are drawn from the active pool and assigned to random stations on the map.
+- At game start, **2 challenges** are drawn from the active pool and assigned to random stations on the map.
 - When any team completes a challenge:
   - The challenge is removed from the map.
-  - If fewer than **10 active challenges** are on the map → **2 new challenges** are drawn.
-  - If exactly **10 active challenges** are on the map → **1 new challenge** is drawn.
+  - If fewer than `max_active_challenges` are on the map → **2 new challenges** are drawn.
+  - If at or above `max_active_challenges` → **1 new challenge** is drawn.
 - Coin reward per challenge is set by the host per challenge (bank challenges have a suggested reward; host can override).
 - Challenges come from two sources:
   - **Built-in challenge bank** — generic, reusable, playable anywhere. Host ticks which ones are active for their game. Bank challenges are read-only; hosts can **Duplicate** any bank challenge to create an editable copy pre-filled with the original.
@@ -74,7 +74,11 @@
 - Host reviews video on external channel → taps **Approve** or **Reject** (optional rejection note).
 - Coins awarded only on approval.
 
-**Mark Failed:** Team taps "Mark Failed" if they attempt and cannot complete. Challenge stays on the map. No coins change hands.
+**Claim:** Before attempting, a team must tap "Claim Challenge" — this sets them as the attempting team and blocks others from also attempting simultaneously.
+
+**Mark Failed:** The claiming team taps "Mark Failed" if they cannot complete. The challenge reward escalates by +25% and that team is blocked from re-attempting. If all teams have failed, the challenge is discarded and a new one is drawn.
+
+**Completion bonus:** Coin rewards scale up throughout the game — each completed challenge adds +5% to all future rewards (capped at +200% bonus). The actual coins awarded are shown in the response and event feed.
 
 ### 2.4 Visibility
 
@@ -226,7 +230,8 @@ station_id              → stations.id
 game_id                 → games.id
 team_id                 → teams.id
 coins_placed            int
-action                  enum: initial_claim | contest_win
+action                  enum: initial_claim | contest_win | reinforce
+stake_ceiling           int      (max stake allowed at time of this action)
 claimed_at              datetime
 ```
 > `Station.current_stake` is the running total of all coins staked by the current owner (initial claim + any reinforcements). It is not a direct copy of any single `StationClaim.coins_placed` — `reinforce` rows record only the increment placed in that action.
@@ -266,8 +271,10 @@ location_updated_at     datetime (nullable)
 id
 team_id                 → teams.id
 user_id                 → users.id
+display_name            string   (captured from auth record at join time)
+host_user_id            string   (denormalised from game, enables host to identify their own game's members)
 role                    enum: captain | member
-approved_by_host        bool     (default: false)
+approved_by_host        bool     (default: false; host is auto-approved on join)
 joined_at               datetime
 ```
 
@@ -275,17 +282,20 @@ joined_at               datetime
 ```
 id
 game_id                 → games.id
-station_id              → stations.id (nullable — if pinned)
+station_id              → stations.id (nullable — assigned on draw, not on create)
 description             string
-coin_reward             int
+coin_reward             int      (base reward; actual payout includes completion bonus)
 difficulty              enum: easy | medium | hard
 source                  enum: bank | host_authored | bank_duplicate
 bank_source_id          → challenge_bank.id (nullable)
-status                  enum: undrawn | active | pending_approval | completed | failed
+status                  enum: undrawn | active | pending_approval | completed | failed | impossible
+attempting_team_id      → teams.id (nullable — team currently claiming this challenge)
+failed_team_ids         JSON array  (team IDs blocked from re-attempting)
+fail_count              int      (number of times this challenge has been failed)
 completed_by_team_id    → teams.id (nullable)
 submitted_at            datetime (nullable)
 completed_at            datetime (nullable)
-rejected_reason         string   (nullable)
+rejected_reason         string   (nullable — set on host reject)
 ```
 
 ### ChallengeBank
@@ -329,8 +339,9 @@ fetched_at              datetime
 ```
 id
 game_id                 → games.id
-type                    enum: claim | contest | toll_paid |
-                               challenge_submitted | challenge_approved |
+type                    enum: claim | contest | toll_paid | reinforce |
+                               challenge_claimed | challenge_submitted |
+                               challenge_completed | challenge_impossible |
                                challenge_rejected | challenge_drawn |
                                challenge_failed | player_joined |
                                game_started | game_ended
@@ -338,8 +349,9 @@ team_id                 → teams.id (nullable — the acting team)
 secondary_team_id       → teams.id (nullable — the receiving team, e.g. toll recipient)
 station_id              → stations.id (nullable)
 challenge_id            → challenges.id (nullable)
-coins_involved          int      (nullable)
+coins_involved          int      (nullable — actual payout including bonus for challenge_completed)
 was_partial             bool     (nullable — for toll_paid events only)
+meta                    JSON     (nullable — extra data, e.g. final_scores on game_ended)
 created_at              datetime
 ```
 
@@ -359,22 +371,24 @@ approved_at             datetime (nullable)
 
 All clients subscribe to a game-scoped SSE channel via PocketBase.
 
-| Event | Key Payload Fields | Audience |
+| Event | Key Fields | Audience |
 |---|---|---|
-| `station_claimed` | station_id, team_id, coins_staked | All |
-| `station_contested` | station_id, new_owner_team_id, new_stake, prev_team_id | All |
-| `toll_paid` | station_id, paying_team_id, receiving_team_id, coins_paid, was_partial | All |
-| `challenge_submitted` | challenge_id, team_id | Host only |
-| `challenge_approved` | challenge_id, team_id, coins_awarded | All |
-| `challenge_rejected` | challenge_id, team_id, rejected_reason | Submitting team + host |
-| `challenge_drawn` | challenge object, station_id | All |
-| `challenge_failed` | challenge_id, team_id | All |
-| `team_location_updated` | team_id, lat, lng | All |
-| `player_joined` | user_id, team_id | Host |
+| `claim` | station_id, team_id, coins_involved | All |
+| `contest` | station_id, team_id (winner), secondary_team_id (loser), coins_involved | All |
+| `toll_paid` | station_id, team_id (payer), secondary_team_id (receiver), coins_involved, was_partial | All |
+| `reinforce` | station_id, team_id, coins_involved | All |
+| `challenge_claimed` | challenge_id, station_id, team_id | All |
+| `challenge_submitted` | challenge_id, station_id, team_id | Host only |
+| `challenge_completed` | challenge_id, station_id, team_id, coins_involved (with bonus) | All |
+| `challenge_rejected` | challenge_id, station_id, team_id, meta.reason | Submitting team + host |
+| `challenge_drawn` | challenge_id, station_id | All |
+| `challenge_failed` | challenge_id, station_id, team_id, meta.newReward, meta.failCount | All |
+| `challenge_impossible` | challenge_id, station_id | All |
+| `player_joined` | team_id, meta.user_id, meta.member_id | Host |
 | `game_started` | — | All |
-| `game_ended` | final_scores array | All |
+| `game_ended` | meta.final_scores array | All |
 
-**Location update throttle:** client sends position every 10 seconds max. Server rejects updates more frequent than 8 seconds per team.
+**Location update throttle:** server rejects updates more frequent than 8 seconds per team.
 
 **Event feed display for `toll_paid`:**
 - Normal toll: *"🚃 [Team Blue] paid [Team Orange] 3 coins to pass through Central Station"*
@@ -386,7 +400,7 @@ All clients subscribe to a game-scoped SSE channel via PocketBase.
 
 ### Mode A — Polygon Auto-Import
 1. Host draws a polygon on the map
-2. Backend checks `OsmStationCache` → on miss or stale (>7 days), queries Overpass API for `railway=station`, `railway=tram_stop`, `amenity=ferry_terminal` within bounds
+2. Backend checks `OsmStationCache` → on miss or stale (>1 hour), queries Overpass API for `railway=station`, `railway=halt` within bounds (with mirror fallback across 3 Overpass endpoints)
 3. Station list returned as pins + sidebar list
 4. Host uses "Select All" or taps individual stations to include/exclude
 5. Confirmed stations saved to Game
@@ -591,18 +605,19 @@ The distinction between "stake locked in" and "goes to their team" is surfaced e
 
 ## 12. Phased Build Plan
 
-### Phase 1 — MVP Core
-- [ ] PocketBase binary running locally (`./pocketbase serve`)
-- [ ] All collections created (Section 6)
-- [ ] Google OAuth2 + email auth
-- [ ] Backend game loop via JS hooks (Section 11 steps 1–10)
-- [ ] React frontend: landing page, auth, dashboard
-- [ ] Host setup: manual pin mode (Mode B), toll cost configurable
-- [ ] Lobby: join by code/QR, host approve/deny
-- [ ] Game map: station nodes, claim / contest / toll flow
-- [ ] Challenge draw + complete/fail + host approval
-- [ ] Real-time sync via PocketBase SSE
-- [ ] End game → scoreboard
+### Phase 1 — MVP Core ✅ Complete
+- [x] PocketBase binary running locally (`./pocketbase serve`)
+- [x] All collections created (Section 6)
+- [x] Email auth (Google OAuth2 deferred)
+- [x] Backend game loop via JS hooks (Section 11 steps 1–10)
+- [x] React frontend: landing page, auth, dashboard
+- [x] Host setup: manual pin mode (Mode B), toll cost configurable, Overpass polygon import
+- [x] Lobby: join by invite code, host approve/deny/leave
+- [x] Game map: station nodes, claim / contest / toll / reinforce flow
+- [x] Challenge draw + claim + complete/fail/impossible + host approval
+- [x] Real-time sync via PocketBase SSE (with reconnection recovery)
+- [x] End game → scoreboard
+- [x] GPS location updates (rate-limited)
 
 ### Phase 2 — Map & Polish
 - [ ] GPS tracking + team avatar pins

@@ -36,13 +36,13 @@ All game logic runs as JavaScript inside PocketBase's JSVM. Hooks register custo
 | `shared.js` | `writeEvent()`, `_drawChallenges()`, shared helpers used by all hooks |
 | `game.pb.js` | Create game, start, end — orchestrates all collections |
 | `stations.pb.js` | Claim, contest, toll, reinforce — coin transfer logic lives here |
-| `challenges.pb.js` | Complete, fail, approve, reject, impossible — full challenge lifecycle |
-| `lobby.pb.js` | Join game, host approve/deny players |
+| `challenges.pb.js` | Claim, complete, fail, approve, reject, impossible — full challenge lifecycle |
+| `lobby.pb.js` | Join/leave game, host approve/deny players |
 | `location.pb.js` | GPS updates (rate-limited: 1 update per 8s per team) |
 | `cleanup.pb.js` | Cron job to purge old games and orphaned records |
 | `osm.pb.js` | Overpass API proxy for station discovery (with mirror fallback) |
 
-Schema is defined in `pb_migrations/1_initial_schema.pb.js` (the initial migration creates all 11 collections). All other migrations layer on top.
+Schema is defined in `pb_migrations/1_initial_schema.pb.js` (the initial migration creates all collections). Migrations 2–13 layer on top — they run automatically on startup.
 
 **Key collections:** `games`, `teams`, `team_members`, `stations`, `station_claims`, `challenges`, `events`, `challenge_bank`, `toll_payments`, `map_templates`, `osm_station_cache`
 
@@ -77,7 +77,9 @@ Schema is defined in `pb_migrations/1_initial_schema.pb.js` (the initial migrati
 
 Status flow: `undrawn` → `active` → `pending_approval` → `completed` | `failed` | `impossible`
 
-`_drawChallenges()` in `shared.js` maintains a pool of active challenges (controlled by `max_active_challenges` on the game). Challenge rewards include a bonus: +5% per previously completed challenge (capped at +200%).
+Teams must first **claim** a challenge (`attempting_team_id` is set) before completing or failing it. Only the claiming team can then act on it. If a team fails, the reward escalates by +25% and they are blocked from re-attempting until another team tries. If all teams fail, the challenge is discarded and redrawn.
+
+`_drawChallenges()` in `shared.js` maintains a pool of active challenges (controlled by `max_active_challenges` on the game). Draws 2 challenges at a time when under the cap, 1 when at cap. Challenge rewards include a completion bonus: +5% per previously completed challenge in the game (capped at +200%). The API response from `/complete` and `/approve` returns the actual bonus-adjusted amount via `coinsAwarded`.
 
 ## Environment
 
@@ -86,5 +88,5 @@ Frontend reads `VITE_PB_URL` from `frontend/.env.local` (defaults to `http://127
 ## Known Limitations
 
 - API visibility: any authenticated user can read all game/team/member records — no row-level security yet
-- `team_members` has no `game_id` field, so SSE subscriptions are not game-scoped (potential cross-game bleed in multi-game scenarios)
+- `team_members` has no `game_id` field, so the SSE subscription covers all games. The frontend store filters out foreign team_members by checking if the `team_id` belongs to a known team in the current game, but the raw SSE events still arrive for all games
 - Completed/failed challenges accumulate in Zustand state; components must filter by status themselves

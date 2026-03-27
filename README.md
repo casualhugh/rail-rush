@@ -59,7 +59,7 @@ VITE_PB_URL=http://127.0.0.1:8090
    - Add challenges (optional)
    - Name your teams and pick colours
 
-3. **Players join** — from Dashboard, enter the invite code shown at the end of setup. Each code is per-team.
+3. **Players join** — from Dashboard, enter the single invite code shown at the end of setup (one code per game). Players then select which team they want to join.
 
 4. **Host approves players** — in the Lobby, the host approves join requests. Once ≥2 teams each have an approved member, the **Start Game** button unlocks.
 
@@ -76,14 +76,17 @@ rail-rush/
 ├── backend/
 │   ├── pocketbase.exe          # PocketBase binary (Windows)
 │   ├── pb_hooks/               # Game logic (JS hooks, run by PocketBase)
-│   │   ├── events.pb.js        # Shared writeEvent() helper
+│   │   ├── shared.js           # writeEvent(), _drawChallenges(), shared helpers
 │   │   ├── game.pb.js          # Create / start / end game
-│   │   ├── lobby.pb.js         # Join / approve / deny
-│   │   ├── stations.pb.js      # Claim / contest / toll
-│   │   ├── challenges.pb.js    # Complete / fail / approve / reject
-│   │   └── location.pb.js      # Rate-limited GPS updates
+│   │   ├── lobby.pb.js         # Join / leave / approve / deny
+│   │   ├── stations.pb.js      # Claim / contest / toll / reinforce
+│   │   ├── challenges.pb.js    # Claim / complete / fail / approve / reject / impossible
+│   │   ├── location.pb.js      # Rate-limited GPS updates
+│   │   ├── osm.pb.js           # Overpass API proxy for station discovery
+│   │   └── cleanup.pb.js       # Cron job: purge old ended games
 │   └── pb_migrations/
-│       └── 1_initial_schema.pb.js   # Auto-creates all collections on first run
+│       ├── 1_initial_schema.pb.js   # Creates all collections on first run
+│       └── 2_*.pb.js … 13_*.pb.js  # Incremental schema changes (run automatically)
 │
 └── frontend/
     └── src/
@@ -120,16 +123,23 @@ All custom routes are under `/api/rr/` and require a Bearer token.
 | POST | `/api/rr/game/:id/start` | Start the game (host only) |
 | POST | `/api/rr/game/:id/end` | End the game (host only) |
 | GET  | `/api/rr/game/:id` | Full game state |
-| POST | `/api/rr/game/:id/join` | Join a team |
+| POST | `/api/rr/game/:id/join` | Join a specific team (body: `{ teamId }`) |
+| POST | `/api/rr/game/:id/leave` | Leave your team (lobby only) |
 | POST | `/api/rr/game/:id/approve/:memberId` | Approve a player (host) |
 | POST | `/api/rr/game/:id/deny/:memberId` | Deny a player (host) |
 | POST | `/api/rr/game/:id/stations` | Save station list (lobby only) |
 | POST | `/api/rr/game/:id/challenges` | Save challenge list (lobby only) |
+| GET  | `/api/rr/game/:id/challenges/pending` | List challenges awaiting approval (host) |
 | POST | `/api/rr/station/:id/claim` | Claim an unclaimed station |
 | POST | `/api/rr/station/:id/contest` | Contest an enemy station |
 | POST | `/api/rr/station/:id/toll` | Pay toll to pass through |
-| POST | `/api/rr/challenge/:id/complete` | Mark challenge complete |
-| POST | `/api/rr/challenge/:id/fail` | Mark challenge failed |
+| POST | `/api/rr/station/:id/reinforce` | Add coins to your station's stake |
+| GET  | `/api/rr/station/:id/ceiling` | Get current stake and reinforce ceiling (owner only) |
+| POST | `/api/rr/challenge/:id/claim` | Claim a challenge to attempt (sets attempting team) |
+| POST | `/api/rr/challenge/:id/complete` | Submit challenge as complete |
+| POST | `/api/rr/challenge/:id/fail` | Mark challenge failed (escalates reward +25%) |
+| POST | `/api/rr/challenge/:id/impossible` | Mark challenge impossible and redraw (host) |
 | POST | `/api/rr/challenge/:id/approve` | Approve completion (host) |
-| POST | `/api/rr/challenge/:id/reject` | Reject completion (host) |
-| PATCH | `/api/rr/team/:id/location` | Update GPS location (rate-limited: 1/8s) |
+| POST | `/api/rr/challenge/:id/reject` | Reject completion, challenge returns to active (host) |
+| PATCH | `/api/rr/team/:id/location` | Update GPS location (rate-limited: 1/8s per team) |
+| POST | `/api/rr/osm/stations` | Fetch OSM stations within a polygon (body: `{ polygon }`) |
