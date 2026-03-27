@@ -31,7 +31,6 @@ export default function HostSetup() {
 
   // Step 1
   const [gameName, setGameName] = useState('')
-  const [expectedEnd, setExpectedEnd] = useState('')
 
   // Step 2
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -256,7 +255,6 @@ export default function HostSetup() {
         teams: Array<{ id: string; name: string; color: string }>
       }>('/api/rr/game', {
         name: gameName,
-        expectedEndTime: expectedEnd || undefined,
         startingCoins, maxStakeIncrement, tollCost,
         requireHostApproval: requireApproval,
         spectatorsAllowed: true,
@@ -315,9 +313,6 @@ export default function HostSetup() {
             <label className={styles.label}>Game name</label>
             <input className={styles.input} value={gameName} onChange={e => setGameName(e.target.value)}
               placeholder="e.g. London Rail Rush" maxLength={60} />
-            <label className={styles.label}>Expected end time (optional)</label>
-            <input className={styles.input} type="datetime-local" value={expectedEnd}
-              onChange={e => setExpectedEnd(e.target.value)} />
             <button className={styles.nextBtn} onClick={() => setStep(2)} disabled={!gameName.trim()}>
               Next: Place Stations →
             </button>

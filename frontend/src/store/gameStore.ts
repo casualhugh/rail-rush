@@ -12,7 +12,6 @@ export interface GameInfo {
   tollCost: number
   maxActiveChallenges: number
   requireHostApproval: boolean
-  expectedEndTime: string | null
   startedAt: string | null
   endedAt: string | null
 }

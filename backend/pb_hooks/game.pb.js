@@ -27,7 +27,6 @@ routerAdd("POST", "/api/rr/game", (e) => {
   game.set("max_active_challenges", body.maxActiveChallenges ?? 10);
   game.set("require_host_approval", body.requireHostApproval ?? false);
   game.set("spectators_allowed", body.spectatorsAllowed ?? true);
-  if (body.expectedEndTime) game.set("expected_end_time", body.expectedEndTime);
   const gameCode = $security.randomStringWithAlphabet(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
   game.set("invite_code", gameCode);
   e.app.save(game);
@@ -222,7 +221,6 @@ routerAdd("GET", "/api/rr/game/{gameId}", (e) => {
     tollCost: game.get("toll_cost"),
     maxActiveChallenges: game.get("max_active_challenges"),
     requireHostApproval: game.get("require_host_approval"),
-    expectedEndTime: game.get("expected_end_time"),
     startedAt: game.get("started_at"),
     endedAt: game.get("ended_at"),
     teams: teams.map(t => ({

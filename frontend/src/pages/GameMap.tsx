@@ -47,7 +47,7 @@ export default function GameMap() {
           id: string; name: string; status: string; hostUserId: string
           startingCoins: number; maxStakeIncrement: number; tollCost: number
           maxActiveChallenges: number; requireHostApproval: boolean
-          expectedEndTime: string | null; startedAt: string | null; endedAt: string | null
+          startedAt: string | null; endedAt: string | null
           teams: Array<{ id: string; name: string; color: string; coinBalance: number; currentLat: number|null; currentLng: number|null }>
           stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; isChallengeLocation: boolean; activeChallengeId: string|null }>
           challenges: Array<{ id: string; stationId: string|null; description: string; coinReward: number; difficulty: string; status: string; completedByTeamId: string|null; attemptingTeamId?: string|null; failedTeamIds?: string[] }>
@@ -64,7 +64,7 @@ export default function GameMap() {
           maxStakeIncrement: data.maxStakeIncrement, tollCost: data.tollCost,
           maxActiveChallenges: data.maxActiveChallenges,
           requireHostApproval: data.requireHostApproval,
-          expectedEndTime: data.expectedEndTime, startedAt: data.startedAt, endedAt: data.endedAt,
+          startedAt: data.startedAt, endedAt: data.endedAt,
         })
         store.setTeams(data.teams.map(t => ({ ...t, gameId: gid, locationUpdatedAt: null })))
         store.setStations(data.stations.map(s => ({ ...s, gameId: gid })))

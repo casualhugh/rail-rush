@@ -12,7 +12,6 @@ export interface GameState {
   tollCost: number
   maxActiveChallenges: number
   requireHostApproval: boolean
-  expectedEndTime: string | null
   startedAt: string | null
   endedAt: string | null
   teams: {
@@ -48,7 +47,6 @@ export const getGame = (gameId: string) =>
 export const createGame = (body: {
   name: string
   cityName?: string
-  expectedEndTime?: string
   startingCoins: number
   maxStakeIncrement?: number
   tollCost?: number
