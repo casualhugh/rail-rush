@@ -357,22 +357,24 @@ routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
   if (!items || items.length === 0) throw new BadRequestError("no stations provided");
 
   // Delete existing stations for this game (allow re-submission)
-  const existing = e.app.findRecordsByFilter("stations", "game_id = {:gameId}", "", 0, 0, { gameId });
-  for (const s of existing) e.app.delete(s);
-
-  const col = e.app.findCollectionByNameOrId("stations");
   const created = [];
-  for (const item of items) {
-    const s = new Record(col);
-    s.set("game_id", gameId);
-    s.set("name", item.name);
-    s.set("lat", item.lat);
-    s.set("lng", item.lng);
-    s.set("current_stake", 0);
-    s.set("is_challenge_location", false);
-    e.app.save(s);
-    created.push({ id: s.id, name: item.name, lat: item.lat, lng: item.lng });
-  }
+  e.app.runInTransaction((txApp) => {
+    const existing = txApp.findRecordsByFilter("stations", "game_id = {:gameId}", "", 0, 0, { gameId });
+    for (const s of existing) txApp.delete(s);
+
+    const col = txApp.findCollectionByNameOrId("stations");
+    for (const item of items) {
+      const s = new Record(col);
+      s.set("game_id", gameId);
+      s.set("name", item.name);
+      s.set("lat", item.lat);
+      s.set("lng", item.lng);
+      s.set("current_stake", 0);
+      s.set("is_challenge_location", false);
+      txApp.save(s);
+      created.push({ id: s.id, name: item.name, lat: item.lat, lng: item.lng });
+    }
+  });
 
   return e.json(201, { created: created.length, stations: created });
 });

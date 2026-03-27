@@ -276,26 +276,28 @@ routerAdd("POST", "/api/rr/game/{gameId}/challenges", (e) => {
   const items = Array.isArray(body) ? body : body.challenges;
   if (!items || items.length === 0) throw new BadRequestError("no challenges provided");
 
-  const existing = e.app.findRecordsByFilter(
-    "challenges", "game_id = {:gameId} && status = 'undrawn'", "", 0, 0, { gameId }
-  );
-  for (const c of existing) e.app.delete(c);
-
-  const col = e.app.findCollectionByNameOrId("challenges");
   const ids = [];
-  for (const item of items) {
-    const c = new Record(col);
-    c.set("game_id", gameId);
-    c.set("description", item.description);
-    c.set("coin_reward", item.coinReward || 5);
-    c.set("difficulty", item.difficulty || "medium");
-    c.set("source", item.source || "host_authored");
-    c.set("bank_source_id", item.bankSourceId || "");
-    c.set("status", "undrawn");
-    if (item.stationId) c.set("station_id", item.stationId);
-    e.app.save(c);
-    ids.push(c.id);
-  }
+  e.app.runInTransaction((txApp) => {
+    const existing = txApp.findRecordsByFilter(
+      "challenges", "game_id = {:gameId} && status = 'undrawn'", "", 0, 0, { gameId }
+    );
+    for (const c of existing) txApp.delete(c);
+
+    const col = txApp.findCollectionByNameOrId("challenges");
+    for (const item of items) {
+      const c = new Record(col);
+      c.set("game_id", gameId);
+      c.set("description", item.description);
+      c.set("coin_reward", item.coinReward || 5);
+      c.set("difficulty", item.difficulty || "medium");
+      c.set("source", item.source || "host_authored");
+      c.set("bank_source_id", item.bankSourceId || "");
+      c.set("status", "undrawn");
+      if (item.stationId) c.set("station_id", item.stationId);
+      txApp.save(c);
+      ids.push(c.id);
+    }
+  });
 
   return e.json(201, { created: ids.length, ids });
 });

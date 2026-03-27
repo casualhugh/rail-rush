@@ -197,30 +197,32 @@ routerAdd("DELETE", "/api/rr/game/{gameId}", (e) => {
   }
 
   // Delete team_members → teams → stations/challenges/events
-  const teams = e.app.findRecordsByFilter("teams", "game_id = {:gid}", "", 0, 0, { gid: gameId });
-  for (const team of teams) {
-    const members = e.app.findRecordsByFilter("team_members", "team_id = {:tid}", "", 0, 0, { tid: team.id });
-    for (const m of members) e.app.delete(m);
-    e.app.delete(team);
-  }
+  e.app.runInTransaction((txApp) => {
+    const teams = txApp.findRecordsByFilter("teams", "game_id = {:gid}", "", 0, 0, { gid: gameId });
+    for (const team of teams) {
+      const members = txApp.findRecordsByFilter("team_members", "team_id = {:tid}", "", 0, 0, { tid: team.id });
+      for (const m of members) txApp.delete(m);
+      txApp.delete(team);
+    }
 
-  const stations = e.app.findRecordsByFilter("stations", "game_id = {:gid}", "", 0, 0, { gid: gameId });
-  for (const s of stations) {
-    const claims = e.app.findRecordsByFilter("station_claims", "station_id = {:sid}", "", 0, 0, { sid: s.id });
-    for (const c of claims) e.app.delete(c);
-    e.app.delete(s);
-  }
+    const stations = txApp.findRecordsByFilter("stations", "game_id = {:gid}", "", 0, 0, { gid: gameId });
+    for (const s of stations) {
+      const claims = txApp.findRecordsByFilter("station_claims", "station_id = {:sid}", "", 0, 0, { sid: s.id });
+      for (const c of claims) txApp.delete(c);
+      txApp.delete(s);
+    }
 
-  const challenges = e.app.findRecordsByFilter("challenges", "game_id = {:gid}", "", 0, 0, { gid: gameId });
-  for (const c of challenges) e.app.delete(c);
+    const challenges = txApp.findRecordsByFilter("challenges", "game_id = {:gid}", "", 0, 0, { gid: gameId });
+    for (const c of challenges) txApp.delete(c);
 
-  const events = e.app.findRecordsByFilter("events", "game_id = {:gid}", "", 0, 0, { gid: gameId });
-  for (const ev of events) e.app.delete(ev);
+    const events = txApp.findRecordsByFilter("events", "game_id = {:gid}", "", 0, 0, { gid: gameId });
+    for (const ev of events) txApp.delete(ev);
 
-  const tolls = e.app.findRecordsByFilter("toll_payments", "game_id = {:gid}", "", 0, 0, { gid: gameId });
-  for (const t of tolls) e.app.delete(t);
+    const tolls = txApp.findRecordsByFilter("toll_payments", "game_id = {:gid}", "", 0, 0, { gid: gameId });
+    for (const t of tolls) txApp.delete(t);
 
-  e.app.delete(game);
+    txApp.delete(game);
+  });
 
   return e.json(200, { ok: true });
 });
