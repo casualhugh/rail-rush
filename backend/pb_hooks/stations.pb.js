@@ -355,6 +355,13 @@ routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
   const body = e.requestInfo().body;
   const items = Array.isArray(body) ? body : body.stations;
   if (!items || items.length === 0) throw new BadRequestError("no stations provided");
+  if (items.length > 500) throw new BadRequestError("cannot save more than 500 stations");
+  for (const item of items) {
+    const lat = parseFloat(item.lat);
+    const lng = parseFloat(item.lng);
+    if (isNaN(lat) || lat < -90 || lat > 90) throw new BadRequestError(`station "${item.name}" has invalid lat (must be -90 to 90)`);
+    if (isNaN(lng) || lng < -180 || lng > 180) throw new BadRequestError(`station "${item.name}" has invalid lng (must be -180 to 180)`);
+  }
 
   // Delete existing stations for this game (allow re-submission)
   const created = [];

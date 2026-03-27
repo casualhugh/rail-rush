@@ -274,6 +274,10 @@ routerAdd("POST", "/api/rr/game/{gameId}/challenges", (e) => {
   const body = e.requestInfo().body;
   const items = Array.isArray(body) ? body : body.challenges;
   if (!items || items.length === 0) throw new BadRequestError("no challenges provided");
+  if (items.length > 500) throw new BadRequestError("cannot save more than 500 challenges");
+  for (const item of items) {
+    if (item.coinReward !== undefined && item.coinReward > 1000) throw new BadRequestError("coinReward cannot exceed 1000");
+  }
 
   const ids = [];
   e.app.runInTransaction((txApp) => {

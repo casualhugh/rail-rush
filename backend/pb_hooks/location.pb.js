@@ -13,6 +13,8 @@ routerAdd("PATCH", "/api/rr/team/{teamId}/location", (e) => {
   const lng = parseFloat(body.lng);
 
   if (isNaN(lat) || isNaN(lng)) throw new BadRequestError("lat and lng are required numbers");
+  if (lat < -90 || lat > 90) throw new BadRequestError("lat must be between -90 and 90");
+  if (lng < -180 || lng > 180) throw new BadRequestError("lng must be between -180 and 180");
 
   let team;
   try { team = e.app.findRecordById("teams", teamId); }

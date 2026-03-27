@@ -10,8 +10,10 @@ routerAdd("POST", "/api/rr/game", (e) => {
 
   const body = e.requestInfo().body;
   if (!body.name) throw new BadRequestError("name is required");
-  if (!body.startingCoins || body.startingCoins < 1) throw new BadRequestError("startingCoins must be ≥ 1");
+  if (!body.startingCoins || body.startingCoins < 10 || body.startingCoins > 1000) throw new BadRequestError("startingCoins must be between 10 and 1000");
+  if (body.maxStakeIncrement !== undefined && (body.maxStakeIncrement < 1 || body.maxStakeIncrement > 1000)) throw new BadRequestError("maxStakeIncrement must be between 1 and 1000");
   if (!body.teams || body.teams.length < 2) throw new BadRequestError("at least 2 teams required");
+  if (body.teams.length > 10) throw new BadRequestError("cannot create more than 10 teams");
 
   const gameCol = e.app.findCollectionByNameOrId("games");
   const game = new Record(gameCol);

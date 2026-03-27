@@ -384,13 +384,13 @@ export default function HostSetup() {
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Rules</h2>
             <label className={styles.label}>Starting coins per team</label>
-            <input className={styles.input} type="number" min={5} max={100} value={startingCoins}
+            <input className={styles.input} type="number" min={10} max={1000} value={startingCoins}
               onChange={e => setStartingCoins(+e.target.value)} />
             <label className={styles.label}>Toll cost (default 3)</label>
             <input className={styles.input} type="number" min={0} max={20} value={tollCost}
               onChange={e => setTollCost(+e.target.value)} />
             <label className={styles.label}>Max stake increment when contesting (default 5)</label>
-            <input className={styles.input} type="number" min={1} max={20} value={maxStakeIncrement}
+            <input className={styles.input} type="number" min={1} max={1000} value={maxStakeIncrement}
               onChange={e => setMaxStakeIncrement(+e.target.value)} />
             <label className={styles.checkLabel}>
               <input type="checkbox" checked={requireApproval} onChange={e => setRequireApproval(e.target.checked)} />
