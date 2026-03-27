@@ -32,6 +32,8 @@ routerAdd("POST", "/api/rr/game", (e) => {
   game.set("max_stake_increment", body.maxStakeIncrement ?? 5);
   game.set("toll_cost", body.tollCost ?? 3);
   game.set("max_active_challenges", body.maxActiveChallenges ?? 10);
+  // require_host_approval controls challenge *completion* approval only — not player joins.
+  // Player joins always require host approval via the lobby (approve/deny endpoints), regardless of this setting.
   game.set("require_host_approval", body.requireHostApproval ?? false);
   game.set("spectators_allowed", body.spectatorsAllowed ?? true);
   const gameCode = $security.randomStringWithAlphabet(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
@@ -85,9 +87,8 @@ routerAdd("POST", "/api/rr/game/{gameId}/start", (e) => {
   if (readyTeams < 2) throw new BadRequestError("need at least 2 teams with approved members");
   if (readyTeams < teams.length) throw new BadRequestError("all teams must have at least one approved member before starting");
 
-  // Draw initial challenges (up to 3): call twice — first draws 2, second draws 1 more
-  _drawChallenges(e.app, game);
-  _drawChallenges(e.app, game);
+  // Draw exactly 3 challenges at game start
+  _drawChallenges(e.app, game, 3);
 
   game.set("status", "active");
   game.set("started_at", new Date().toISOString());

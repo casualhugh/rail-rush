@@ -27,7 +27,7 @@ function _clearChallengeFromStation(app, challenge) {
   } catch (_) {}
 }
 
-function _drawChallenges(app, game) {
+function _drawChallenges(app, game, forceDraw) {
   const gameId = game.id;
   const maxActive = game.get("max_active_challenges") || 10;
 
@@ -35,7 +35,7 @@ function _drawChallenges(app, game) {
     "challenges", "game_id = {:gameId} && status = 'active'", "", 0, 0, { gameId }
   ).length;
 
-  const drawCount = activeCount >= maxActive ? 1 : 2;
+  const drawCount = forceDraw !== undefined ? forceDraw : (activeCount >= maxActive ? 1 : 2);
 
   const pool = app.findRecordsByFilter(
     "challenges", "game_id = {:gameId} && status = 'undrawn'", "", 0, 0, { gameId }
