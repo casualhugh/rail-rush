@@ -55,7 +55,7 @@ export const createGame = (body: {
   maxActiveChallenges?: number
   requireHostApproval?: boolean
   teams: { name: string; color: string }[]
-}) => api.post<{ gameId: string; teams: { id: string; name: string; color: string }[] }>('/api/rr/game', body)
+}) => api.post<{ gameId: string; inviteCode: string; teams: { id: string; name: string; color: string }[] }>('/api/rr/game', body)
 
 export const startGame = (gameId: string) =>
   api.post<{ ok: boolean; challengesDrawn: number }>(`/api/rr/game/${gameId}/start`)
