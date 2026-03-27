@@ -31,14 +31,29 @@ routerAdd("POST", "/api/rr/osm/stations", (e) => {
   const polyStr = polygon.map(p => `${p[0]} ${p[1]}`).join(' ');
   const query = `[out:json][timeout:10];(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}"););out;`;
 
+  const MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+  ];
+
   let stations = [];
-  const resp = $http.send({
-    url: "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query),
-    method: "GET",
-    timeout: 20,
-  });
-  if (resp.statusCode !== 200 || !resp.json) {
-    throw new BadRequestError("OSM returned status " + resp.statusCode + ": " + toString(resp.body));
+  let resp = null;
+  for (const mirror of MIRRORS) {
+    try {
+      resp = $http.send({
+        url: mirror + "?data=" + encodeURIComponent(query),
+        method: "GET",
+        timeout: 20,
+      });
+      if (resp.statusCode === 200 && resp.json) break;
+      resp = null;
+    } catch (_) {
+      resp = null;
+    }
+  }
+  if (!resp) {
+    throw new BadRequestError("All Overpass mirrors failed — try again later");
   }
   try {
     stations = (resp.json.elements || []).map(n => ({

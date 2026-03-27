@@ -1,1 +1,4 @@
 .worktrees/
+backend/pb_data/*.db
+backend/pb_data/*.db-shm
+backend/pb_data/*.db-wal

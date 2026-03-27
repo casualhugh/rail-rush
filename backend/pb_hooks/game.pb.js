@@ -83,6 +83,7 @@ routerAdd("POST", "/api/rr/game/{gameId}/start", (e) => {
     if (members.length > 0) readyTeams++;
   }
   if (readyTeams < 2) throw new BadRequestError("need at least 2 teams with approved members");
+  if (readyTeams < teams.length) throw new BadRequestError("all teams must have at least one approved member before starting");
 
   // Draw initial challenges (up to 3): call twice — first draws 2, second draws 1 more
   _drawChallenges(e.app, game);

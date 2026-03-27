@@ -147,9 +147,9 @@ export default function Lobby() {
     pendingMembers:  pending.filter(m => m.team_id === t.id),
   }))
 
-  // Check start eligibility
+  // Check start eligibility — all teams must have ≥1 approved member, and at least 2 teams total
   const readyTeams = teamsWithMembers.filter(t => t.approvedMembers.length > 0)
-  const canStart = readyTeams.length >= 2
+  const canStart = readyTeams.length >= 2 && readyTeams.length === teamsWithMembers.length
 
   // My approval status
   const myApproved = myMember?.approved_by_host ?? false
