@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [joinCode, setJoinCode] = useState('')
   const [joinError, setJoinError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [atGameLimit, setAtGameLimit] = useState(false)
 
   useEffect(() => {
     loadGames()
@@ -56,6 +57,8 @@ export default function Dashboard() {
       const all = [...hosted.items as unknown as GameSummary[], ...joinedGames]
       const unique = all.filter((g, i) => all.findIndex(x => x.id === g.id) === i)
       setGames(unique.sort((a, b) => (b.created || '').localeCompare(a.created || '')))
+      const activeHostedCount = hosted.items.filter((g: any) => g.status !== 'ended').length
+      setAtGameLimit(activeHostedCount >= 5)
     } catch (e) {
       console.error('Failed to load games', e)
     } finally {
@@ -129,7 +132,12 @@ export default function Dashboard() {
           </form>
           {joinError && <p className={styles.error}>{joinError}</p>}
 
-          <button className={styles.createBtn} onClick={() => navigate('/game/new')}>
+          <button
+            className={styles.createBtn}
+            onClick={() => navigate('/game/new')}
+            disabled={atGameLimit}
+            title={atGameLimit ? 'You have 5 active games — end or delete one first' : undefined}
+          >
             + Create Game
           </button>
         </div>

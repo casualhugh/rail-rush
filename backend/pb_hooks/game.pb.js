@@ -8,6 +8,13 @@ routerAdd("POST", "/api/rr/game", (e) => {
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
+  const activeCount = e.app.findRecordsByFilter(
+    "games",
+    "host_user_id = {:uid} && status != 'ended'",
+    "", 0, 0, { uid: authRecord.id }
+  ).length;
+  if (activeCount >= 5) throw new BadRequestError("you already have 5 active or lobby games — end or delete one first");
+
   const body = e.requestInfo().body;
   if (!body.name) throw new BadRequestError("name is required");
   if (!body.startingCoins || body.startingCoins < 10 || body.startingCoins > 1000) throw new BadRequestError("startingCoins must be between 10 and 1000");
