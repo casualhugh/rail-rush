@@ -116,6 +116,7 @@ function _completeChallengeAndDraw(app, challenge, game, teamId) {
   });
 
   _drawChallenges(app, game);
+  return coinReward;
 }
 
 function getFailedTeamIds(challenge) {

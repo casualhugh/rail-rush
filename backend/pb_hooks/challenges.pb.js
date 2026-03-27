@@ -20,6 +20,16 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
   const game = e.app.findRecordById("games", challenge.get("game_id"));
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
 
+  const team = e.app.findRecordById("teams", teamId);
+  if (team.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
+
+  const _claimMembers = e.app.findRecordsByFilter(
+    "team_members",
+    "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true",
+    "", 1, 0, { teamId, userId: authRecord.id }
+  );
+  if (!_claimMembers || _claimMembers.length === 0) throw new ForbiddenError("you are not an approved member of this team");
+
   // Check team not blocked (in failed_team_ids)
   const failedTeams = getFailedTeamIds(challenge);
   if (failedTeams.includes(teamId)) {
@@ -70,6 +80,16 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/complete", (e) => {
   const game = e.app.findRecordById("games", challenge.get("game_id"));
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
 
+  const completeTeam = e.app.findRecordById("teams", teamId);
+  if (completeTeam.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
+
+  const _completeMembers = e.app.findRecordsByFilter(
+    "team_members",
+    "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true",
+    "", 1, 0, { teamId, userId: authRecord.id }
+  );
+  if (!_completeMembers || _completeMembers.length === 0) throw new ForbiddenError("you are not an approved member of this team");
+
   const attemptingTeamComplete = challenge.get("attempting_team_id");
   if (attemptingTeamComplete && attemptingTeamComplete !== teamId) {
     throw new ForbiddenError("another team is currently attempting this challenge");
@@ -89,8 +109,8 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/complete", (e) => {
     return e.json(200, { ok: true, status: "pending_approval" });
   }
 
-  _completeChallengeAndDraw(e.app, challenge, game, teamId);
-  return e.json(200, { ok: true, status: "completed", coinsAwarded: challenge.get("coin_reward") });
+  const coinsAwarded = _completeChallengeAndDraw(e.app, challenge, game, teamId);
+  return e.json(200, { ok: true, status: "completed", coinsAwarded });
 });
 
 
@@ -213,8 +233,8 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/approve", (e) => {
   const game = e.app.findRecordById("games", challenge.get("game_id"));
   if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can approve challenges");
 
-  _completeChallengeAndDraw(e.app, challenge, game, challenge.get("completed_by_team_id"));
-  return e.json(200, { ok: true, coinsAwarded: challenge.get("coin_reward") });
+  const coinsAwarded = _completeChallengeAndDraw(e.app, challenge, game, challenge.get("completed_by_team_id"));
+  return e.json(200, { ok: true, coinsAwarded });
 });
 
 

@@ -259,10 +259,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   updateTeamMember: (record) => {
     const updated = recordToMember(record)
-    set(s => ({
-      teamMembers: s.teamMembers.some(m => m.id === updated.id)
-        ? s.teamMembers.map(m => m.id === updated.id ? updated : m)
-        : [...s.teamMembers, updated],
-    }))
+    set(s => {
+      const isKnownTeam = s.teams.some(t => t.id === updated.teamId)
+      if (!isKnownTeam && !s.teamMembers.some(m => m.id === updated.id)) return s
+      return {
+        teamMembers: s.teamMembers.some(m => m.id === updated.id)
+          ? s.teamMembers.map(m => m.id === updated.id ? updated : m)
+          : [...s.teamMembers, updated],
+      }
+    })
   },
 }))

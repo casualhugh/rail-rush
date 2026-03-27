@@ -80,12 +80,6 @@ export default function EventFeed({ onClose }: Props) {
           text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> completed challenge at <strong>{stationName(s)}</strong>{coins ? ` +${coins}🪙` : ''}</>,
           className: styles.evApproved,
         }
-      case 'challenge_approved':
-        return {
-          icon: '✅',
-          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> completed challenge at <strong>{stationName(s)}</strong>{coins ? ` +${coins}🪙` : ''}</>,
-          className: styles.evApproved,
-        }
       case 'challenge_failed':
         return {
           icon: '❌',
