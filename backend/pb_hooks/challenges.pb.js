@@ -33,7 +33,7 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/claim", (e) => {
   // Check team not blocked (in failed_team_ids)
   const failedTeams = getFailedTeamIds(challenge);
   if (failedTeams.includes(teamId)) {
-    throw new ForbiddenError("your team failed this challenge — wait for another team to attempt it first");
+    throw new ForbiddenError("your team has already failed this challenge and cannot attempt it again");
   }
 
   // Check team doesn't already have an active challenge claimed
