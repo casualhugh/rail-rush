@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useGameStore, type Station, type Challenge } from '../store/gameStore'
-import { getStationCeiling, reinforceStation, claimStation, contestStation, payToll } from '../lib/api'
+import { reinforceStation, claimStation, contestStation, payToll } from '../lib/api'
 import styles from './StationModal.module.css'
 
 interface Props {
@@ -16,11 +16,6 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   const { teams, challenges } = useGameStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  // Own-station ceiling state
-  const [ceilingLoading, setCeilingLoading] = useState(false)
-  const [ceilingError, setCeilingError] = useState<string | null>(null)
-  const [stakeCeiling, setStakeCeiling] = useState<number | null>(null)
   const [reinforceCoins, setReinforceCoins] = useState(1)
 
   const myTeam = teams.find(t => t.id === myTeamId)
@@ -32,6 +27,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   const isFree   = !station.ownerTeamId
 
   const currentStake = station.currentStake ?? 0
+  const stakeCeiling = station.stakeCeiling ?? 0
   const minContest   = currentStake + 1
   const maxContest   = currentStake + maxStakeIncrement
   const myBalance    = myTeam?.coinBalance ?? 0
@@ -47,26 +43,6 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   // Effective toll (may be partial)
   const effectiveToll = Math.min(tollCost, myBalance)
   const isPartialToll = effectiveToll < tollCost
-
-  // Load ceiling when this is our own station. Re-fires if station changes.
-  useEffect(() => {
-    if (isOwn) loadCeiling()
-  }, [station.id, isOwn])
-
-  async function loadCeiling() {
-    setCeilingLoading(true)
-    setCeilingError(null)
-    setStakeCeiling(null)
-    try {
-      const data = await getStationCeiling(station.id)
-      setStakeCeiling(data.stakeCeiling)
-      setReinforceCoins(1)
-    } catch (err: unknown) {
-      setCeilingError(err instanceof Error ? err.message : 'Could not load station info')
-    } finally {
-      setCeilingLoading(false)
-    }
-  }
 
   async function doClaim() {
     setError('')
@@ -149,21 +125,10 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
         {isOwn && (
           <>
             <div className={styles.ownMsg}>
-              <span>✓</span> You own this station
-              {stakeCeiling !== null && ` · ${currentStake}🪙 staked · ceiling ${stakeCeiling}🪙`}
+              <span>✓</span> You own this station · {currentStake}🪙 staked · ceiling {stakeCeiling}🪙
             </div>
 
-            {ceilingLoading && <p className={styles.coinNote}>Loading…</p>}
-
-            {ceilingError !== null && (
-              <div className={styles.actions}>
-                <p className={styles.error}>{ceilingError}</p>
-                <button className={styles.closeBtn} onClick={loadCeiling}>Retry</button>
-                <button className={styles.closeBtn} onClick={onClose}>Close</button>
-              </div>
-            )}
-
-            {stakeCeiling !== null && currentStake < stakeCeiling && (() => {
+            {currentStake < stakeCeiling && (() => {
               const ceilingRemaining = stakeCeiling - currentStake
               return (
               <div className={styles.actions}>
@@ -192,7 +157,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
               )
             })()}
 
-            {stakeCeiling !== null && currentStake === stakeCeiling && (
+            {currentStake === stakeCeiling && (
               <p className={styles.reinforcedMsg}>Fully reinforced — {currentStake}🪙 staked</p>
             )}
           </>

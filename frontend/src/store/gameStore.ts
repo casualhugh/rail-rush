@@ -35,6 +35,7 @@ export interface Station {
   lng: number
   ownerTeamId: string | null
   currentStake: number
+  stakeCeiling: number
   isChallengeLocation: boolean
   activeChallengeId: string | null
 }
@@ -141,6 +142,7 @@ function recordToStation(r: Record<string, unknown>): Station {
     lng: r.lng as number,
     ownerTeamId: (r.current_owner_team_id as string) || null,
     currentStake: (r.current_stake as number) ?? 0,
+    stakeCeiling: (r.stake_ceiling as number) ?? 0,
     isChallengeLocation: (r.is_challenge_location as boolean) ?? false,
     activeChallengeId: (r.active_challenge_id as string) || null,
   }

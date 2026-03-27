@@ -20,7 +20,7 @@ export interface GameState {
   }[]
   stations: {
     id: string; name: string; lat: number; lng: number
-    ownerTeamId: string | null; currentStake: number
+    ownerTeamId: string | null; currentStake: number; stakeCeiling: number
     isChallengeLocation: boolean; activeChallengeId: string | null
   }[]
   challenges: {
@@ -90,9 +90,6 @@ export const contestStation = (stationId: string, teamId: string, newStake: numb
 
 export const payToll = (stationId: string, teamId: string) =>
   api.post<{ ok: boolean; coinsPaid: number; wasPartial: boolean; newBalance: number }>(`/api/rr/station/${stationId}/toll`, { teamId })
-
-export const getStationCeiling = (stationId: string) =>
-  api.get<{ currentStake: number; stakeCeiling: number }>(`/api/rr/station/${stationId}/ceiling`)
 
 export const reinforceStation = (stationId: string, teamId: string, coins: number) =>
   api.post<{ ok: boolean; newBalance: number; newStake: number; stakeCeiling: number }>(

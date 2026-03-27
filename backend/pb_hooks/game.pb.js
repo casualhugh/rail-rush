@@ -247,6 +247,7 @@ routerAdd("GET", "/api/rr/game/{gameId}", (e) => {
       lng: s.get("lng"),
       ownerTeamId: s.get("current_owner_team_id"),
       currentStake: s.get("current_stake"),
+      stakeCeiling: s.get("stake_ceiling") || 0,
       isChallengeLocation: s.get("is_challenge_location"),
       activeChallengeId: s.get("active_challenge_id"),
     })),
