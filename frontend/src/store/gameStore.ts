@@ -23,7 +23,6 @@ export interface Team {
   name: string
   color: string
   coinBalance: number
-  inviteCode: string
   currentLat: number | null
   currentLng: number | null
   locationUpdatedAt: string | null
@@ -128,7 +127,6 @@ function recordToTeam(r: Record<string, unknown>): Team {
     name: r.name as string,
     color: r.color as string,
     coinBalance: (r.coin_balance as number) ?? 0,
-    inviteCode: (r.invite_code as string) ?? '',
     currentLat: (r.current_lat as number) ?? null,
     currentLng: (r.current_lng as number) ?? null,
     locationUpdatedAt: (r.location_updated_at as string) ?? null,

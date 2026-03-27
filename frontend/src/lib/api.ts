@@ -17,7 +17,7 @@ export interface GameState {
   endedAt: string | null
   teams: {
     id: string; name: string; color: string; coinBalance: number
-    inviteCode: string; currentLat: number | null; currentLng: number | null
+    currentLat: number | null; currentLng: number | null
   }[]
   stations: {
     id: string; name: string; lat: number; lng: number
@@ -55,7 +55,7 @@ export const createGame = (body: {
   maxActiveChallenges?: number
   requireHostApproval?: boolean
   teams: { name: string; color: string }[]
-}) => api.post<{ gameId: string; teams: { id: string; name: string; color: string; inviteCode: string }[] }>('/api/rr/game', body)
+}) => api.post<{ gameId: string; teams: { id: string; name: string; color: string }[] }>('/api/rr/game', body)
 
 export const startGame = (gameId: string) =>
   api.post<{ ok: boolean; challengesDrawn: number }>(`/api/rr/game/${gameId}/start`)

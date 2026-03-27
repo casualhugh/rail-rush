@@ -38,8 +38,6 @@ routerAdd("POST", "/api/rr/game", (e) => {
     team.set("name", t.name);
     team.set("color", t.color);
     team.set("coin_balance", body.startingCoins);
-    const teamCode = $security.randomStringWithAlphabet(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
-    team.set("invite_code", teamCode);
     e.app.save(team);
     createdTeams.push({ id: team.id, name: t.name, color: t.color });
   }
@@ -267,7 +265,6 @@ routerAdd("GET", "/api/rr/game/{gameId}", (e) => {
       name: t.get("name"),
       color: t.get("color"),
       coinBalance: t.get("coin_balance"),
-      inviteCode: t.get("invite_code"),
       currentLat: t.get("current_lat"),
       currentLng: t.get("current_lng"),
     })),
