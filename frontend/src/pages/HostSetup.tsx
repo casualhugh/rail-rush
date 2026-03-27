@@ -462,6 +462,26 @@ export default function HostSetup() {
                 <button className={styles.removeBtn} onClick={() => setChallenges(arr => arr.filter((_, j) => j !== i))}>✕</button>
               </div>
             ))}
+            {(() => {
+              const totalCoinReward = challenges.reduce((sum, c) => sum + c.coinReward, 0)
+              const totalCoinsInPlay = teams.length * startingCoins
+              const poolTooSmall = challenges.length > 0 && challenges.length < 5
+              const rewardTooLow = challenges.length > 0 && totalCoinReward < totalCoinsInPlay * 0.5
+              return (
+                <>
+                  {poolTooSmall && (
+                    <p className={styles.warning}>
+                      ⚠️ Very small challenge pool ({challenges.length} challenge{challenges.length !== 1 ? 's' : ''}). Consider adding more.
+                    </p>
+                  )}
+                  {rewardTooLow && (
+                    <p className={styles.warning}>
+                      ⚠️ Total challenge rewards ({totalCoinReward}🪙) are less than half the coins in play ({Math.floor(totalCoinsInPlay * 0.5)}🪙). Players may run out of coins.
+                    </p>
+                  )}
+                </>
+              )
+            })()}
             <button className={styles.nextBtn} onClick={() => setStep(5)}>Next: Teams →</button>
           </div>
         )}

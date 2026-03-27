@@ -438,6 +438,12 @@
   font-size: 0.875rem;
 }
 
+.warning {
+  color: #E8A02B;
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+}
+
 .mapToolbar {
   display: flex;
   gap: 0.5rem;
