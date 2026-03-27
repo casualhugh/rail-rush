@@ -107,6 +107,22 @@
 }
 .challengeBadge:hover { transform: scale(1.1); }
 
+/* Reconnecting banner */
+.reconnectingBanner {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #C0392B;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 100;
+  pointer-events: none;
+}
+
 /* Feed drawer */
 .feedDrawer {
   position: absolute;

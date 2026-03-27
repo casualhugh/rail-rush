@@ -22,6 +22,7 @@ export default function GameMap() {
   const challengeMarkerMapRef = useRef<Map<string, maplibregl.Marker>>(new Map())
 
   const [loading, setLoading] = useState(true)
+  const [isReconnecting, setIsReconnecting] = useState(false)
   const [myTeamId, setMyTeamId] = useState<string | null>(null)
   const [myTeamColor, setMyTeamColor] = useState('#1A6B6B')
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
@@ -132,8 +133,57 @@ export default function GameMap() {
       }
     }
 
+    async function applyGameState(gid: string) {
+      const data = await api.get<{
+        id: string; name: string; status: string; hostUserId: string
+        startingCoins: number; maxStakeIncrement: number; tollCost: number
+        maxActiveChallenges: number; requireHostApproval: boolean
+        startedAt: string | null; endedAt: string | null
+        teams: Array<{ id: string; name: string; color: string; coinBalance: number; currentLat: number|null; currentLng: number|null }>
+        stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; isChallengeLocation: boolean; activeChallengeId: string|null }>
+        challenges: Array<{ id: string; stationId: string|null; description: string; coinReward: number; difficulty: string; status: string; completedByTeamId: string|null; attemptingTeamId?: string|null; failedTeamIds?: string[] }>
+      }>(`/api/rr/game/${gid}`)
+
+      store.setGame({
+        id: data.id, name: data.name, status: data.status as 'active',
+        hostUserId: data.hostUserId, startingCoins: data.startingCoins,
+        maxStakeIncrement: data.maxStakeIncrement, tollCost: data.tollCost,
+        maxActiveChallenges: data.maxActiveChallenges,
+        requireHostApproval: data.requireHostApproval,
+        startedAt: data.startedAt, endedAt: data.endedAt,
+      })
+      store.setTeams(data.teams.map(t => ({ ...t, gameId: gid, locationUpdatedAt: null })))
+      store.setStations(data.stations.map(s => ({ ...s, gameId: gid })))
+      store.setChallenges(data.challenges.map(c => ({
+        ...c, gameId: gid,
+        difficulty: c.difficulty as 'easy'|'medium'|'hard',
+        status: c.status as Challenge['status'],
+        completedByTeamId: c.completedByTeamId,
+        attemptingTeamId: c.attemptingTeamId ?? null,
+        failedTeamIds: c.failedTeamIds ?? [],
+      })))
+    }
+
+    const handleOffline = () => setIsReconnecting(true)
+    const handleOnline = async () => {
+      try {
+        await applyGameState(gid)
+      } catch (_) {
+        // best-effort — SSE events will continue to patch state once reconnected
+      }
+      if (!cancelled) setIsReconnecting(false)
+    }
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+
     init()
-    return () => { cancelled = true; unsubscribe?.(); store.reset() }
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+      store.reset()
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+    }
   }, [gameId])
 
   // Watch for game_ended event
@@ -271,6 +321,13 @@ const map = new maplibregl.Map({
 
   return (
     <div className={styles.root}>
+      {/* Reconnecting banner */}
+      {isReconnecting && (
+        <div className={styles.reconnectingBanner}>
+          Reconnecting…
+        </div>
+      )}
+
       {/* Map */}
       <div ref={mapContainerRef} className={styles.map} />
 
