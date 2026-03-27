@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGameStore, type Station, type Challenge } from '../store/gameStore'
-import { reinforceStation, claimStation, contestStation, payToll } from '../lib/api'
+import { reinforceStation, stakeStation, payToll } from '../lib/api'
 import styles from './StationModal.module.css'
 
 interface Props {
@@ -44,25 +44,14 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   const effectiveToll = Math.min(tollCost, myBalance)
   const isPartialToll = effectiveToll < tollCost
 
-  async function doClaim() {
+  async function doStake(stake: number) {
     setError('')
     setLoading(true)
     try {
-      await claimStation(station.id, myTeamId, claimCoins)
+      await stakeStation(station.id, myTeamId, stake)
       onClose()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to claim')
-    } finally { setLoading(false) }
-  }
-
-  async function doContest() {
-    setError('')
-    setLoading(true)
-    try {
-      await contestStation(station.id, myTeamId, contestStake)
-      onClose()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to contest')
+      setError(err instanceof Error ? err.message : 'Failed to stake')
     } finally { setLoading(false) }
   }
 
@@ -174,7 +163,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
               <span className={styles.sliderVal}>{claimCoins}🪙</span>
             </div>
             <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
-            <button className={styles.primaryBtn} onClick={doClaim} disabled={loading || myBalance < 1}>
+            <button className={styles.primaryBtn} onClick={() => doStake(claimCoins)} disabled={loading || myBalance < 1}>
               {loading ? '…' : `Claim — ${claimCoins} coin${claimCoins !== 1 ? 's' : ''}`}
             </button>
           </div>
@@ -195,7 +184,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                   <span className={styles.sliderVal}>{Math.min(contestStake, Math.max(contestMin, contestMax))}🪙</span>
                 </div>
                 <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
-                <button className={styles.primaryBtn} onClick={doContest} disabled={loading}>
+                <button className={styles.primaryBtn} onClick={() => doStake(Math.min(contestStake, Math.max(contestMin, contestMax)))} disabled={loading}>
                   {loading ? '…' : `Contest — ${Math.min(contestStake, Math.max(contestMin, contestMax))} coins`}
                 </button>
               </>

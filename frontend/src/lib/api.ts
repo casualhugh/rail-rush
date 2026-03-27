@@ -82,11 +82,8 @@ export const saveChallenges = (gameId: string, challenges: ChallengeInput[]) =>
 
 // ── Stations ──────────────────────────────────────────────────────────────────
 
-export const claimStation = (stationId: string, teamId: string, coins: number) =>
-  api.post<{ ok: boolean; newBalance: number; stake: number }>(`/api/rr/station/${stationId}/claim`, { teamId, coins })
-
-export const contestStation = (stationId: string, teamId: string, newStake: number) =>
-  api.post<{ ok: boolean; newBalance: number; newStake: number; prevTeamId: string }>(`/api/rr/station/${stationId}/contest`, { teamId, newStake })
+export const stakeStation = (stationId: string, teamId: string, stake: number) =>
+  api.post<{ ok: boolean; newBalance: number; stake: number; prevTeamId?: string }>(`/api/rr/station/${stationId}/stake`, { teamId, stake })
 
 export const payToll = (stationId: string, teamId: string) =>
   api.post<{ ok: boolean; coinsPaid: number; wasPartial: boolean; newBalance: number }>(`/api/rr/station/${stationId}/toll`, { teamId })

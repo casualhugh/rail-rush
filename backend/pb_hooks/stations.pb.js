@@ -1,6 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
+// POST /api/rr/station/{stationId}/stake
+// Body: { teamId, stake } — unified claim/contest. Works for both unclaimed and claimed stations.
+routerAdd("POST", "/api/rr/station/{stationId}/stake", (e) => {
   const { writeEvent } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
@@ -8,11 +10,10 @@ routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
   const stationId = e.request.pathValue("stationId");
   const body = e.requestInfo().body;
   const teamId = body.teamId;
-  const coins = parseInt(body.coins, 10);
+  const stake = parseInt(body.stake, 10);
 
   if (!teamId) throw new BadRequestError("teamId is required");
-  // NOTE: coins validation against max_stake_increment is below, after game is loaded.
-  // The old hard-coded "coins > 5" check has been removed.
+  if (isNaN(stake) || stake < 1) throw new BadRequestError("stake must be a positive integer");
 
   let station;
   try { station = e.app.findRecordById("stations", stationId); }
@@ -20,95 +21,35 @@ routerAdd("POST", "/api/rr/station/{stationId}/claim", (e) => {
 
   const game = e.app.findRecordById("games", station.get("game_id"));
   if (game.get("status") !== "active") throw new BadRequestError("game is not active");
-  if (station.get("current_owner_team_id")) throw new BadRequestError("station is already claimed");
 
+  const currentStake = station.get("current_stake") || 0;
+  const currentOwnerTeamId = station.get("current_owner_team_id") || null;
   const maxStakeIncrement = game.get("max_stake_increment") || 5;
-  if (isNaN(coins) || coins < 1 || coins > maxStakeIncrement) {
-    throw new BadRequestError(`coins must be between 1 and ${maxStakeIncrement}`);
-  }
+
+  // Owner cannot stake against their own station
+  if (currentOwnerTeamId === teamId) throw new BadRequestError("you already own this station");
+
+  // Unified validation: stake must be > currentStake and <= currentStake + maxStakeIncrement
+  if (stake <= currentStake) throw new BadRequestError(`stake must be greater than current stake of ${currentStake}`);
+  if (stake > currentStake + maxStakeIncrement) throw new BadRequestError(`stake cannot exceed ${currentStake + maxStakeIncrement}`);
 
   const team = e.app.findRecordById("teams", teamId);
   if (team.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
-  if (team.get("coin_balance") < coins) throw new BadRequestError("insufficient coins");
+  if (team.get("coin_balance") < stake) throw new BadRequestError("insufficient coins");
 
-  const _claimMembers = e.app.findRecordsByFilter(
+  const _members = e.app.findRecordsByFilter(
     "team_members",
     "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true",
     "", 1, 0, { teamId, userId: authRecord.id }
   );
-  if (!_claimMembers || _claimMembers.length === 0) throw new ForbiddenError("you are not an approved member of this team");
-
-  e.app.runInTransaction((txApp) => {
-    team.set("coin_balance", team.get("coin_balance") - coins);
-    txApp.save(team);
-
-    const claimCol = txApp.findCollectionByNameOrId("station_claims");
-    const claim = new Record(claimCol);
-    claim.set("station_id", stationId);
-    claim.set("game_id", game.id);
-    claim.set("team_id", teamId);
-    claim.set("coins_placed", coins);
-    claim.set("action", "initial_claim");
-    claim.set("stake_ceiling", maxStakeIncrement);
-    claim.set("claimed_at", new Date().toISOString());
-    txApp.save(claim);
-
-    station.set("current_owner_team_id", teamId);
-    station.set("current_stake", coins);
-    station.set("stake_ceiling", maxStakeIncrement);
-    txApp.save(station);
-
-    writeEvent(txApp, { gameId: game.id, type: "claim", teamId, stationId, coinsInvolved: coins });
-  });
-
-  return e.json(200, { ok: true, newBalance: team.get("coin_balance"), stake: coins });
-});
-
-
-// POST /api/rr/station/{stationId}/contest
-// Body: { teamId, newStake }
-routerAdd("POST", "/api/rr/station/{stationId}/contest", (e) => {
-  const { writeEvent } = require(`${__hooks}/shared.js`);
-  const authRecord = e.auth;
-  if (!authRecord) throw new UnauthorizedError("unauthenticated");
-
-  const stationId = e.request.pathValue("stationId");
-  const body = e.requestInfo().body;
-  const teamId = body.teamId;
-  const newStake = parseInt(body.newStake, 10);
-
-  if (!teamId) throw new BadRequestError("teamId is required");
-  if (!newStake || newStake < 1) throw new BadRequestError("newStake must be ≥ 1");
-
-  let station;
-  try { station = e.app.findRecordById("stations", stationId); }
-  catch (_) { throw new NotFoundError("station not found"); }
-
-  const game = e.app.findRecordById("games", station.get("game_id"));
-  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
-
-  const currentOwnerTeamId = station.get("current_owner_team_id");
-  if (!currentOwnerTeamId) throw new BadRequestError("station is unclaimed — use claim instead");
-  if (currentOwnerTeamId === teamId) throw new BadRequestError("you already own this station");
-
-  const currentStake = station.get("current_stake") || 0;
-  const maxStakeIncrement = game.get("max_stake_increment") || 5;
-  const maxAllowedStake = currentStake + maxStakeIncrement;
-
-  if (newStake < currentStake + 1) throw new BadRequestError(`new stake must be at least ${currentStake + 1}`);
-  if (newStake > maxAllowedStake) throw new BadRequestError(`new stake cannot exceed ${maxAllowedStake}`);
-
-  const team = e.app.findRecordById("teams", teamId);
-  if (team.get("game_id") !== game.id) throw new BadRequestError("team does not belong to this game");
-  if (team.get("coin_balance") < newStake) throw new BadRequestError("insufficient coins");
-
-  const _contestMembers = e.app.findRecordsByFilter("team_members", "team_id = {:teamId} && user_id = {:userId} && approved_by_host = true", "", 1, 0, { teamId, userId: authRecord.id });
-  if (!_contestMembers || _contestMembers.length === 0) throw new ForbiddenError("you are not an approved member of this team");
+  if (!_members || _members.length === 0) throw new ForbiddenError("you are not an approved member of this team");
 
   const prevTeamId = currentOwnerTeamId;
+  const action = currentOwnerTeamId ? "contest_win" : "initial_claim";
+  const eventType = currentOwnerTeamId ? "contest" : "claim";
 
   e.app.runInTransaction((txApp) => {
-    team.set("coin_balance", team.get("coin_balance") - newStake);
+    team.set("coin_balance", team.get("coin_balance") - stake);
     txApp.save(team);
 
     const claimCol = txApp.findCollectionByNameOrId("station_claims");
@@ -116,25 +57,25 @@ routerAdd("POST", "/api/rr/station/{stationId}/contest", (e) => {
     claim.set("station_id", stationId);
     claim.set("game_id", game.id);
     claim.set("team_id", teamId);
-    claim.set("coins_placed", newStake);
-    claim.set("action", "contest_win");
+    claim.set("coins_placed", stake);
+    claim.set("action", action);
     claim.set("stake_ceiling", currentStake + maxStakeIncrement);
     claim.set("claimed_at", new Date().toISOString());
     txApp.save(claim);
 
     station.set("current_owner_team_id", teamId);
-    station.set("current_stake", newStake);
+    station.set("current_stake", stake);
     station.set("stake_ceiling", currentStake + maxStakeIncrement);
     txApp.save(station);
 
-    writeEvent(txApp, {
-      gameId: game.id, type: "contest",
-      teamId, secondaryTeamId: prevTeamId,
-      stationId, coinsInvolved: newStake,
-    });
+    const eventData = { gameId: game.id, type: eventType, teamId, stationId, coinsInvolved: stake };
+    if (prevTeamId) eventData.secondaryTeamId = prevTeamId;
+    writeEvent(txApp, eventData);
   });
 
-  return e.json(200, { ok: true, newBalance: team.get("coin_balance"), newStake, prevTeamId });
+  const response = { ok: true, newBalance: team.get("coin_balance"), stake };
+  if (prevTeamId) response.prevTeamId = prevTeamId;
+  return e.json(200, response);
 });
 
 
