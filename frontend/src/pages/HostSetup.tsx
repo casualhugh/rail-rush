@@ -192,11 +192,28 @@ export default function HostSetup() {
   async function fetchOsmStations() {
     setOsmLoading(true)
     try {
-      const result = await api.post<{ stations: { id: string; name: string; lat: number; lng: number }[] }>(
-        '/api/rr/osm/stations',
-        { polygon: polygonPoints }
-      )
-      const newPins: StationPin[] = result.stations
+      const polyStr = polygonPoints.map(p => `${p[0]} ${p[1]}`).join(' ')
+      const query = `[out:json][timeout:25];(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}"););out;`
+      const MIRRORS = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://overpass.openstreetmap.ru/api/interpreter',
+      ]
+      let data: { elements: Array<{ lat: number; lon: number; tags?: Record<string, string> }> } | null = null
+      for (const mirror of MIRRORS) {
+        try {
+          const res = await fetch(`${mirror}?data=${encodeURIComponent(query)}`)
+          if (res.ok) { data = await res.json(); break }
+        } catch (_) {}
+      }
+      if (!data) throw new Error('All Overpass mirrors failed — try again later')
+
+      const newPins: StationPin[] = (data.elements || [])
+        .map(n => ({
+          name: n.tags?.name || n.tags?.['name:en'] || 'Unnamed Station',
+          lat: n.lat,
+          lng: n.lon,
+        }))
         .filter(s => !stations.some(existing =>
           Math.abs(existing.lat - s.lat) < 0.0001 && Math.abs(existing.lng - s.lng) < 0.0001
         ))
