@@ -143,7 +143,6 @@ routerAdd("POST", "/api/rr/challenge/{challengeId}/fail", (e) => {
     // Everyone has failed — clear and redraw
     _clearChallengeFromStation(e.app, challenge);
     challenge.set("status", "failed");
-    challenge.set("completed_by_team_id", teamId);
     challenge.set("completed_at", new Date().toISOString());
     challenge.set("attempting_team_id", "");
     challenge.set("failed_team_ids", JSON.stringify(failedTeams));

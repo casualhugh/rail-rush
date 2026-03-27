@@ -109,7 +109,7 @@ function _completeChallengeAndDraw(app, challenge, game, teamId) {
   }
 
   writeEvent(app, {
-    gameId: game.id, type: "challenge_approved",
+    gameId: game.id, type: "challenge_completed",
     teamId, challengeId: challenge.id,
     stationId: challenge.get("station_id") || "",
     coinsInvolved: coinReward,
