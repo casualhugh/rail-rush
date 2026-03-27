@@ -162,9 +162,9 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
             )}
             {!isAttempting && !isOtherTeam && !isBlocked && (
               <div className={styles.actions}>
-                <p className={styles.actionHint}>Claim this challenge to attempt it. You can only attempt one challenge at a time.</p>
+                <p className={styles.actionHint}>Reveal this challenge to attempt it. You can only attempt one challenge at a time.</p>
                 <button className={styles.completeBtn} onClick={doClaim} disabled={claiming}>
-                  {claiming ? '…' : `Claim — +${challenge.coinReward}🪙`}
+                  {claiming ? '…' : `Reveal — +${challenge.coinReward}🪙`}
                 </button>
               </div>
             )}
