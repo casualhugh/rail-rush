@@ -48,7 +48,7 @@ routerAdd("POST", "/api/rr/game", (e) => {
 
 // POST /api/rr/game/{gameId}/start
 routerAdd("POST", "/api/rr/game/{gameId}/start", (e) => {
-  const { writeEvent } = require(`${__hooks}/shared.js`);
+  const { writeEvent, _drawChallenges } = require(`${__hooks}/shared.js`);
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
 
@@ -76,48 +76,9 @@ routerAdd("POST", "/api/rr/game/{gameId}/start", (e) => {
   }
   if (readyTeams < 2) throw new BadRequestError("need at least 2 teams with approved members");
 
-  const stations = e.app.findRecordsByFilter("stations", "game_id = {:gameId}", "", 0, 0, { gameId });
-  const allChallenges = e.app.findRecordsByFilter(
-    "challenges", "game_id = {:gameId} && status = 'undrawn'", "", 0, 0, { gameId }
-  );
-
-  // Shuffle and draw up to 3
-  const shuffled = allChallenges.slice().sort(() => Math.random() - 0.5);
-  const toDraw = shuffled.slice(0, Math.min(3, shuffled.length));
-
-  const availableStations = stations.filter(s => !s.get("active_challenge_id"));
-
-  for (const challenge of toDraw) {
-    let targetStation = null;
-
-    const pinnedStationId = challenge.get("station_id");
-    if (pinnedStationId) {
-      try { targetStation = e.app.findRecordById("stations", pinnedStationId); } catch (_) {}
-    }
-
-    if (!targetStation && availableStations.length > 0) {
-      const idx = Math.floor(Math.random() * availableStations.length);
-      targetStation = availableStations.splice(idx, 1)[0];
-    }
-
-    challenge.set("status", "active");
-    if (targetStation) {
-      challenge.set("station_id", targetStation.id);
-      e.app.save(challenge);
-      targetStation.set("is_challenge_location", true);
-      targetStation.set("active_challenge_id", challenge.id);
-      e.app.save(targetStation);
-    } else {
-      e.app.save(challenge);
-    }
-
-    writeEvent(e.app, {
-      gameId,
-      type: "challenge_drawn",
-      challengeId: challenge.id,
-      stationId: targetStation ? targetStation.id : "",
-    });
-  }
+  // Draw initial challenges (up to 3): call twice — first draws 2, second draws 1 more
+  _drawChallenges(e.app, game);
+  _drawChallenges(e.app, game);
 
   game.set("status", "active");
   game.set("started_at", new Date().toISOString());
@@ -125,7 +86,7 @@ routerAdd("POST", "/api/rr/game/{gameId}/start", (e) => {
 
   writeEvent(e.app, { gameId, type: "game_started" });
 
-  return e.json(200, { ok: true, challengesDrawn: toDraw.length });
+  return e.json(200, { ok: true });
 });
 
 
