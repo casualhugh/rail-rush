@@ -250,6 +250,7 @@ routerAdd("GET", "/api/rr/game/{gameId}", (e) => {
       stakeCeiling: s.get("stake_ceiling") || 0,
       isChallengeLocation: s.get("is_challenge_location"),
       activeChallengeId: s.get("active_challenge_id"),
+      connectedTo: s.get("connected_to") || [],
     })),
     challenges: challenges.map(c => ({
       id: c.id,

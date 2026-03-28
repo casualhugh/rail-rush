@@ -224,7 +224,7 @@ routerAdd("POST", "/api/rr/station/{stationId}/reinforce", (e) => {
 
 
 // POST /api/rr/game/{gameId}/stations
-// Body: array of { name, lat, lng } — saves station pins for this game.
+// Body: { stations: [{name, lat, lng, tempId?}], connections?: [[tempId1, tempId2], ...] }
 routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
@@ -240,6 +240,7 @@ routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
 
   const body = e.requestInfo().body;
   const items = Array.isArray(body) ? body : body.stations;
+  const connectionPairs = Array.isArray(body.connections) ? body.connections : [];
   if (!items || items.length === 0) throw new BadRequestError("no stations provided");
   if (items.length > 500) throw new BadRequestError("cannot save more than 500 stations");
   for (const item of items) {
@@ -256,6 +257,10 @@ routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
     for (const s of existing) txApp.delete(s);
 
     const col = txApp.findCollectionByNameOrId("stations");
+
+    // First pass: create all station records and build tempId → realId map
+    const tempToReal = {};
+    const recordById = {};
     for (const item of items) {
       const s = new Record(col);
       s.set("game_id", gameId);
@@ -266,6 +271,28 @@ routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
       s.set("is_challenge_location", false);
       txApp.save(s);
       created.push({ id: s.id, name: item.name, lat: item.lat, lng: item.lng });
+      if (item.tempId) tempToReal[item.tempId] = s.id;
+      recordById[s.id] = s;
+    }
+
+    // Second pass: build adjacency map from connection pairs and save connected_to
+    if (connectionPairs.length > 0) {
+      const adjacency = {};
+      for (const pair of connectionPairs) {
+        const aReal = tempToReal[pair[0]] || pair[0];
+        const bReal = tempToReal[pair[1]] || pair[1];
+        if (!aReal || !bReal || aReal === bReal) continue;
+        if (!adjacency[aReal]) adjacency[aReal] = [];
+        if (!adjacency[bReal]) adjacency[bReal] = [];
+        if (!adjacency[aReal].includes(bReal)) adjacency[aReal].push(bReal);
+        if (!adjacency[bReal].includes(aReal)) adjacency[bReal].push(aReal);
+      }
+      for (const stationId of Object.keys(adjacency)) {
+        const rec = recordById[stationId];
+        if (!rec) continue;
+        rec.set("connected_to", adjacency[stationId]);
+        txApp.save(rec);
+      }
     }
   });
 

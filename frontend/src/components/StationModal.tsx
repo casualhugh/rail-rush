@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function StationModal({ station, myTeamId, tollCost, maxStakeIncrement, onClose, onChallengeOpen }: Props) {
-  const { teams, challenges } = useGameStore()
+  const { teams, challenges, stations } = useGameStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [reinforceCoins, setReinforceCoins] = useState(1)
@@ -25,6 +25,9 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
   const isOwn    = station.ownerTeamId === myTeamId
   const isEnemy  = !!station.ownerTeamId && !isOwn
   const isFree   = !station.ownerTeamId
+  const connectedStations = (station.connectedTo ?? [])
+    .map(id => stations.find(s => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => s != null)
 
   const currentStake = station.currentStake ?? 0
   const stakeCeiling = station.stakeCeiling ?? 0
@@ -92,6 +95,18 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
             </div>
           )}
         </div>
+
+        {/* Connected stations */}
+        {connectedStations.length > 0 && (
+          <div className={styles.connections}>
+            <span className={styles.connectionsLabel}>Connects to</span>
+            <div className={styles.connectionsList}>
+              {connectedStations.map(s => (
+                <span key={s.id} className={styles.connectionChip}>{s.name}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Challenge badge if present */}
         {activeChallenge && (

@@ -50,7 +50,7 @@ export default function GameMap() {
           maxActiveChallenges: number; requireHostApproval: boolean
           startedAt: string | null; endedAt: string | null
           teams: Array<{ id: string; name: string; color: string; coinBalance: number; currentLat: number|null; currentLng: number|null }>
-          stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; stakeCeiling: number; isChallengeLocation: boolean; activeChallengeId: string|null }>
+          stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; stakeCeiling: number; isChallengeLocation: boolean; activeChallengeId: string|null; connectedTo: string[] }>
           challenges: Array<{ id: string; stationId: string|null; description: string; coinReward: number; difficulty: string; status: string; completedByTeamId: string|null; attemptingTeamId?: string|null; failedTeamIds?: string[] }>
         }>(`/api/rr/game/${gid}`)
 
@@ -68,7 +68,7 @@ export default function GameMap() {
           startedAt: data.startedAt, endedAt: data.endedAt,
         })
         store.setTeams(data.teams.map(t => ({ ...t, gameId: gid, locationUpdatedAt: null })))
-        store.setStations(data.stations.map(s => ({ ...s, gameId: gid })))
+        store.setStations(data.stations.map(s => ({ ...s, gameId: gid, connectedTo: s.connectedTo ?? [] })))
         store.setChallenges(data.challenges.map(c => ({
           ...c, gameId: gid,
           difficulty: c.difficulty as 'easy'|'medium'|'hard',
@@ -140,7 +140,7 @@ export default function GameMap() {
         maxActiveChallenges: number; requireHostApproval: boolean
         startedAt: string | null; endedAt: string | null
         teams: Array<{ id: string; name: string; color: string; coinBalance: number; currentLat: number|null; currentLng: number|null }>
-        stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; stakeCeiling: number; isChallengeLocation: boolean; activeChallengeId: string|null }>
+        stations: Array<{ id: string; name: string; lat: number; lng: number; ownerTeamId: string|null; currentStake: number; stakeCeiling: number; isChallengeLocation: boolean; activeChallengeId: string|null; connectedTo: string[] }>
         challenges: Array<{ id: string; stationId: string|null; description: string; coinReward: number; difficulty: string; status: string; completedByTeamId: string|null; attemptingTeamId?: string|null; failedTeamIds?: string[] }>
       }>(`/api/rr/game/${gid}`)
 
@@ -153,7 +153,7 @@ export default function GameMap() {
         startedAt: data.startedAt, endedAt: data.endedAt,
       })
       store.setTeams(data.teams.map(t => ({ ...t, gameId: gid, locationUpdatedAt: null })))
-      store.setStations(data.stations.map(s => ({ ...s, gameId: gid })))
+      store.setStations(data.stations.map(s => ({ ...s, gameId: gid, connectedTo: s.connectedTo ?? [] })))
       store.setChallenges(data.challenges.map(c => ({
         ...c, gameId: gid,
         difficulty: c.difficulty as 'easy'|'medium'|'hard',
@@ -208,9 +208,19 @@ const map = new maplibregl.Map({
       zoom: 12,
     })
 
-    // Apply warm map filter
+    // Apply warm map filter and add connection line layers
     map.on('load', () => {
       map.getCanvas().style.filter = 'sepia(30%) saturate(80%) brightness(95%)'
+      map.addSource('station-connections', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+      // Navy border layer (rendered below station markers)
+      map.addLayer({ id: 'conn-bg', type: 'line', source: 'station-connections',
+        paint: { 'line-color': '#0d1b3e', 'line-width': 6 } })
+      // White fill layer on top of navy
+      map.addLayer({ id: 'conn-fg', type: 'line', source: 'station-connections',
+        paint: { 'line-color': '#ffffff', 'line-width': 3 } })
     })
 
     mapRef.current = map
@@ -227,6 +237,25 @@ const map = new maplibregl.Map({
 
   function renderMarkers(map: maplibregl.Map) {
     const { stations, challenges, teams } = useGameStore.getState()
+
+    // Connection lines
+    const connSrc = map.getSource('station-connections') as maplibregl.GeoJSONSource | undefined
+    if (connSrc) {
+      const stationsById = new Map(stations.map(s => [s.id, s]))
+      const seen = new Set<string>()
+      const features = stations.flatMap(s =>
+        (s.connectedTo ?? []).flatMap(neighborId => {
+          const key = [s.id, neighborId].sort().join(':')
+          if (seen.has(key)) return []
+          seen.add(key)
+          const nb = stationsById.get(neighborId)
+          if (!nb) return []
+          return [{ type: 'Feature' as const, geometry: { type: 'LineString' as const,
+            coordinates: [[s.lng, s.lat], [nb.lng, nb.lat]] }, properties: {} }]
+        })
+      )
+      connSrc.setData({ type: 'FeatureCollection', features })
+    }
 
     // Station markers
     for (const station of stations) {

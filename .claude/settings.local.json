@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(taskkill /F /IM pocketbase.exe)"
+      "Bash(taskkill /F /IM pocketbase.exe)",
+      "Bash(npm run:*)"
     ]
   }
 }

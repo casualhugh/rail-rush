@@ -497,3 +497,25 @@
   border: 2px solid white;
   cursor: pointer;
 }
+.connectHint {
+  font-size: 0.8rem;
+  color: #0d1b3e;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  background: #e8f0fe;
+  border-radius: 6px;
+}
+.connBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0d1b3e;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}

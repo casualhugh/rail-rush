@@ -6,7 +6,7 @@ import styles from './HostSetup.module.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface StationPin { name: string; lat: number; lng: number; tempId: string }
+interface StationPin { name: string; lat: number; lng: number; tempId: string; osmNodeId?: number }
 interface TeamDraft  { name: string; color: string }
 interface ChallengeDraft {
   description: string
@@ -21,6 +21,7 @@ const PRESET_COLORS = [
   '#2C82C9', '#27AE60', '#F0AC2B', '#E91E8C',
 ]
 
+type DrawMode = 'pin' | 'polygon' | 'connect'
 type Step = 1 | 2 | 3 | 4 | 5 | 6
 
 export default function HostSetup() {
@@ -40,12 +41,16 @@ export default function HostSetup() {
   const stationsRef = useRef<StationPin[]>([])
   const [editingStation, setEditingStation] = useState<StationPin | null>(null)
   const [editName, setEditName] = useState('')
-  const [drawMode, setDrawMode] = useState<'pin' | 'polygon'>('pin')
+  const [drawMode, setDrawMode] = useState<DrawMode>('pin')
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([])
   const polygonLayerRef = useRef<maplibregl.Marker[]>([])
   const [osmLoading, setOsmLoading] = useState(false)
-  const drawModeRef = useRef<'pin' | 'polygon'>('pin')
+  const drawModeRef = useRef<DrawMode>('pin')
   const polygonPointsRef = useRef<[number, number][]>([])
+  const [connections, setConnections] = useState<[string, string][]>([])
+  const connectionsRef = useRef<[string, string][]>([])
+  const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
+  const connectingFromRef = useRef<string | null>(null)
 
   // Step 3
   const [startingCoins, setStartingCoins] = useState(25)
@@ -75,10 +80,12 @@ export default function HostSetup() {
     teams: Array<{ id: string; name: string; color: string }>
   } | null>(null)
 
-  // Keep stationsRef in sync for use inside map click closure
+  // Keep refs in sync for use inside map click closures
   useEffect(() => { stationsRef.current = stations }, [stations])
   useEffect(() => { drawModeRef.current = drawMode }, [drawMode])
   useEffect(() => { polygonPointsRef.current = polygonPoints }, [polygonPoints])
+  useEffect(() => { connectionsRef.current = connections }, [connections])
+  useEffect(() => { connectingFromRef.current = connectingFrom }, [connectingFrom])
 
   // Init map when step 2 is active
   useEffect(() => {
@@ -103,6 +110,13 @@ export default function HostSetup() {
         paint: { 'fill-color': '#7B3FA0', 'fill-opacity': 0.15 } })
       map.addLayer({ id: 'polygon-draw-line', type: 'line', source: 'polygon-draw',
         paint: { 'line-color': '#7B3FA0', 'line-width': 2, 'line-dasharray': [2, 1] } })
+
+      map.addSource('station-connections', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+      map.addLayer({ id: 'conn-line', type: 'line', source: 'station-connections',
+        paint: { 'line-color': '#0d1b3e', 'line-width': 4 } })
     })
 
     map.on('click', (e) => {
@@ -122,6 +136,8 @@ export default function HostSetup() {
         return
       }
 
+      if (drawModeRef.current === 'connect') return
+
       const { lat, lng } = e.lngLat
       const tempId = crypto.randomUUID()
       const pin: StationPin = { name: `Station ${stationsRef.current.length + 1}`, lat, lng, tempId }
@@ -139,6 +155,10 @@ export default function HostSetup() {
 
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
+        if (drawModeRef.current === 'connect') {
+          handleConnectClick(tempId)
+          return
+        }
         const current = stationsRef.current.find(s => s.tempId === tempId)
         if (current) {
           setEditingStation(current)
@@ -179,7 +199,43 @@ export default function HostSetup() {
     markersRef.current.get(tempId)?.remove()
     markersRef.current.delete(tempId)
     setStations(s => s.filter(p => p.tempId !== tempId))
+    setConnections(c => c.filter(([a, b]) => a !== tempId && b !== tempId))
     setEditingStation(null)
+  }
+
+  function updateConnectionLayer(conns: [string, string][], pins: StationPin[]) {
+    const src = mapRef.current?.getSource('station-connections') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    const byTempId = new Map(pins.map(p => [p.tempId, p]))
+    const features = conns.flatMap(([a, b]) => {
+      const pa = byTempId.get(a), pb = byTempId.get(b)
+      if (!pa || !pb) return []
+      return [{ type: 'Feature' as const, geometry: { type: 'LineString' as const,
+        coordinates: [[pa.lng, pa.lat], [pb.lng, pb.lat]] }, properties: {} }]
+    })
+    src.setData({ type: 'FeatureCollection', features })
+  }
+
+  function handleConnectClick(clickedTempId: string) {
+    const from = connectingFromRef.current
+    if (!from) {
+      setConnectingFrom(clickedTempId)
+      return
+    }
+    if (from === clickedTempId) {
+      setConnectingFrom(null)
+      return
+    }
+    // Toggle connection
+    const exists = connectionsRef.current.some(
+      ([a, b]) => (a === from && b === clickedTempId) || (a === clickedTempId && b === from)
+    )
+    const next: [string, string][] = exists
+      ? connectionsRef.current.filter(([a, b]) => !((a === from && b === clickedTempId) || (a === clickedTempId && b === from)))
+      : [...connectionsRef.current, [from, clickedTempId]]
+    setConnections(next)
+    updateConnectionLayer(next, stationsRef.current)
+    setConnectingFrom(null)
   }
 
   function clearPolygonMarkers() {
@@ -193,13 +249,22 @@ export default function HostSetup() {
     setOsmLoading(true)
     try {
       const polyStr = polygonPoints.map(p => `${p[0]} ${p[1]}`).join(' ')
-      const query = `[out:json][timeout:25];(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}"););out;`
+      // Also fetch railway ways so we can auto-derive connections between station nodes
+      const query = [
+        `[out:json][timeout:30];`,
+        `(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}");)->.stations;`,
+        `way["railway"~"^(rail|subway|tram|light_rail|monorail)$"](bn.stations)->.ways;`,
+        `.ways out geom;`,
+        `.stations out;`,
+      ].join('')
       const MIRRORS = [
         'https://overpass-api.de/api/interpreter',
         'https://overpass.kumi.systems/api/interpreter',
         'https://overpass.openstreetmap.ru/api/interpreter',
       ]
-      let data: { elements: Array<{ lat: number; lon: number; tags?: Record<string, string> }> } | null = null
+      type OsmNode = { type: 'node'; id: number; lat: number; lon: number; tags?: Record<string, string> }
+      type OsmWay  = { type: 'way';  id: number; nodes: number[]; geometry?: Array<{ lat: number; lon: number }> }
+      let data: { elements: Array<OsmNode | OsmWay> } | null = null
       for (const mirror of MIRRORS) {
         try {
           const res = await fetch(`${mirror}?data=${encodeURIComponent(query)}`)
@@ -208,16 +273,20 @@ export default function HostSetup() {
       }
       if (!data) throw new Error('All Overpass mirrors failed — try again later')
 
-      const newPins: StationPin[] = (data.elements || [])
+      const nodeElements = (data.elements || []).filter((el): el is OsmNode => el.type === 'node')
+      const wayElements  = (data.elements || []).filter((el): el is OsmWay  => el.type === 'way')
+
+      const newPins: StationPin[] = nodeElements
+        .filter(n => !stations.some(existing =>
+          Math.abs(existing.lat - n.lat) < 0.0001 && Math.abs(existing.lng - n.lon) < 0.0001
+        ))
         .map(n => ({
           name: n.tags?.name || n.tags?.['name:en'] || 'Unnamed Station',
           lat: n.lat,
           lng: n.lon,
+          tempId: crypto.randomUUID(),
+          osmNodeId: n.id,
         }))
-        .filter(s => !stations.some(existing =>
-          Math.abs(existing.lat - s.lat) < 0.0001 && Math.abs(existing.lng - s.lng) < 0.0001
-        ))
-        .map(s => ({ name: s.name, lat: s.lat, lng: s.lng, tempId: crypto.randomUUID() }))
 
       for (const pin of newPins) {
         const el = document.createElement('div')
@@ -228,13 +297,36 @@ export default function HostSetup() {
         const marker = new maplibregl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(mapRef.current!)
         el.addEventListener('click', (ev) => {
           ev.stopPropagation()
+          if (drawModeRef.current === 'connect') { handleConnectClick(pin.tempId); return }
           const current = stationsRef.current.find(s => s.tempId === pin.tempId)
           if (current) { setEditingStation(current); setEditName(current.name) }
         })
         markersRef.current.set(pin.tempId, marker)
       }
 
-      setStations(s => [...s, ...newPins])
+      // Auto-derive connections from OSM railway ways
+      const osmIdToTempId = new Map(newPins.map(p => [p.osmNodeId!, p.tempId]))
+      const newConnections: [string, string][] = []
+      for (const way of wayElements) {
+        // Collect station tempIds that appear on this way, in node order
+        const stationsOnWay = way.nodes
+          .map(nodeId => osmIdToTempId.get(nodeId))
+          .filter((id): id is string => id !== undefined)
+        // Connect consecutive stations on the same way
+        for (let i = 0; i < stationsOnWay.length - 1; i++) {
+          const a = stationsOnWay[i], b = stationsOnWay[i + 1]
+          const alreadyExists = [...connectionsRef.current, ...newConnections].some(
+            ([x, y]) => (x === a && y === b) || (x === b && y === a)
+          )
+          if (!alreadyExists) newConnections.push([a, b])
+        }
+      }
+
+      const allPins = [...stationsRef.current, ...newPins]
+      const allConns: [string, string][] = [...connectionsRef.current, ...newConnections]
+      setStations(allPins)
+      setConnections(allConns)
+      updateConnectionLayer(allConns, allPins)
       setDrawMode('pin')
       setPolygonPoints([])
       clearPolygonMarkers()
@@ -281,7 +373,8 @@ export default function HostSetup() {
       const stationResult = await api.post<{
         stations: Array<{ id: string; name: string; lat: number; lng: number }>
       }>(`/api/rr/game/${result.gameId}/stations`, {
-        stations: stations.map(s => ({ name: s.name, lat: s.lat, lng: s.lng })),
+        stations: stations.map(s => ({ name: s.name, lat: s.lat, lng: s.lng, tempId: s.tempId })),
+        connections,
       })
 
       const tempToRealId: Record<string, string> = {}
@@ -345,12 +438,23 @@ export default function HostSetup() {
             <div className={styles.mapToolbar}>
               <button
                 className={drawMode === 'pin' ? styles.toolActive : styles.tool}
-                onClick={() => { setDrawMode('pin'); setPolygonPoints([]); clearPolygonMarkers() }}
+                onClick={() => { setDrawMode('pin'); setPolygonPoints([]); clearPolygonMarkers(); setConnectingFrom(null) }}
               >📍 Place Pins</button>
               <button
                 className={drawMode === 'polygon' ? styles.toolActive : styles.tool}
-                onClick={() => setDrawMode('polygon')}
+                onClick={() => { setDrawMode('polygon'); setConnectingFrom(null) }}
               >⬡ Draw Area</button>
+              {stations.length >= 2 && (
+                <button
+                  className={drawMode === 'connect' ? styles.toolActive : styles.tool}
+                  onClick={() => { setDrawMode('connect'); setPolygonPoints([]); clearPolygonMarkers() }}
+                >🔗 Connect</button>
+              )}
+              {drawMode === 'connect' && connectingFrom && (
+                <span className={styles.connectHint}>
+                  {stations.find(s => s.tempId === connectingFrom)?.name} → tap another station
+                </span>
+              )}
               {drawMode === 'polygon' && polygonPoints.length >= 3 && (
                 <button className={styles.toolAction} onClick={fetchOsmStations} disabled={osmLoading}>
                   {osmLoading ? 'Searching…' : `Search OSM (${polygonPoints.length} pts)`}
@@ -374,15 +478,18 @@ export default function HostSetup() {
               </div>
             )}
             <div className={styles.stationList}>
-              {stations.map(p => (
-                <div key={p.tempId} className={styles.stationItem}>
-                  <span>{p.name}</span>
-                  <div className={styles.stationItemBtns}>
-                    <button className={styles.iconBtn} onClick={() => { setEditingStation(p); setEditName(p.name) }}>✎</button>
-                    <button className={styles.iconBtnDanger} onClick={() => removeStation(p.tempId)}>✕</button>
+              {stations.map(p => {
+                const connCount = connections.filter(([a, b]) => a === p.tempId || b === p.tempId).length
+                return (
+                  <div key={p.tempId} className={styles.stationItem}>
+                    <span>{p.name}{connCount > 0 && <span className={styles.connBadge}>{connCount}</span>}</span>
+                    <div className={styles.stationItemBtns}>
+                      <button className={styles.iconBtn} onClick={() => { setEditingStation(p); setEditName(p.name) }}>✎</button>
+                      <button className={styles.iconBtnDanger} onClick={() => removeStation(p.tempId)}>✕</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <div className={styles.mapFooter}>
               <button className={styles.nextBtn} onClick={() => setStep(3)} disabled={stations.length < 2}>

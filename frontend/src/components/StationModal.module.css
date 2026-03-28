@@ -220,3 +220,32 @@
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
 }
+
+.connections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  margin-bottom: 0.5rem;
+}
+.connectionsLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.connectionsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.connectionChip {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  background: #e8f0fe;
+  color: #0d1b3e;
+  font-weight: 500;
+}

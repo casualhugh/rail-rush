@@ -38,6 +38,7 @@ export interface Station {
   stakeCeiling: number
   isChallengeLocation: boolean
   activeChallengeId: string | null
+  connectedTo: string[]
 }
 
 export interface Challenge {
@@ -145,6 +146,7 @@ function recordToStation(r: Record<string, unknown>): Station {
     stakeCeiling: (r.stake_ceiling as number) ?? 0,
     isChallengeLocation: (r.is_challenge_location as boolean) ?? false,
     activeChallengeId: (r.active_challenge_id as string) || null,
+    connectedTo: Array.isArray(r.connected_to) ? (r.connected_to as string[]) : [],
   }
 }
 
