@@ -215,9 +215,9 @@ const map = new maplibregl.Map({
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
       })
-      // Black border layer (rendered below station markers)
+      // Border layer — team color when both endpoints share an owner, otherwise neutral
       map.addLayer({ id: 'conn-bg', type: 'line', source: 'station-connections',
-        paint: { 'line-color': '#8A7F72', 'line-width': 6 } })
+        paint: { 'line-color': ['coalesce', ['get', 'teamColor'], '#8A7F72'], 'line-width': 10 } })
       // White fill layer on top of black
       map.addLayer({ id: 'conn-fg', type: 'line', source: 'station-connections',
         paint: { 'line-color': '#ffffff', 'line-width': 3 } })
@@ -242,6 +242,7 @@ const map = new maplibregl.Map({
     const connSrc = map.getSource('station-connections') as maplibregl.GeoJSONSource | undefined
     if (connSrc) {
       const stationsById = new Map(stations.map(s => [s.id, s]))
+      const teamsById = new Map(teams.map(t => [t.id, t]))
       const seen = new Set<string>()
       const features = stations.flatMap(s =>
         (s.connectedTo ?? []).flatMap(neighborId => {
@@ -250,8 +251,11 @@ const map = new maplibregl.Map({
           seen.add(key)
           const nb = stationsById.get(neighborId)
           if (!nb) return []
+          const sharedOwner = s.ownerTeamId && nb.ownerTeamId && s.ownerTeamId === nb.ownerTeamId
+            ? s.ownerTeamId : null
+          const teamColor = sharedOwner ? (teamsById.get(sharedOwner)?.color ?? null) : null
           return [{ type: 'Feature' as const, geometry: { type: 'LineString' as const,
-            coordinates: [[s.lng, s.lat], [nb.lng, nb.lat]] }, properties: {} }]
+            coordinates: [[s.lng, s.lat], [nb.lng, nb.lat]] }, properties: { teamColor } }]
         })
       )
       connSrc.setData({ type: 'FeatureCollection', features })
@@ -279,7 +283,7 @@ const map = new maplibregl.Map({
         const dot = document.createElement('div')
         dot.className = `station-dot ${styles.stationDot}`
         dot.style.background = color ?? '#ffffff'
-        dot.style.border = color ? '5px solid rgba(255,255,255,0.8)' : '5px solid #8A7F72'
+        dot.style.border = color ? '3px solid rgba(255,255,255,0.8)' : '3px solid #8A7F72'
         el.appendChild(dot)
 
         el.addEventListener('click', (e) => {
