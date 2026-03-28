@@ -36,27 +36,94 @@
   gap: 0.75rem;
 }
 
+.gameCodeBtn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  transition: background 0.15s;
+}
+.gameCodeBtn:hover { background: rgba(255,255,255,0.25); }
+
+.gameCodeLabel {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
 .gameCode {
   font-family: var(--font-mono);
   font-size: 1rem;
   font-weight: 700;
   color: rgba(255,255,255,0.9);
   letter-spacing: 0.15em;
-  background: rgba(255,255,255,0.15);
-  border-radius: 6px;
-  padding: 0.3rem 0.7rem;
+  line-height: 1;
 }
 
-.badge {
-  background: rgba(255,255,255,0.2);
-  color: #fff;
-  border-radius: 999px;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* QR modal */
+.qrOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
 }
+
+.qrModal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 300px;
+  width: 90%;
+}
+
+.qrTitle {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.qrCode {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--color-text);
+}
+
+.qrHint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.qrClose {
+  margin-top: 0.25rem;
+  width: 100%;
+  background: none;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  border-radius: 8px;
+  padding: 0.6rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  transition: border-color 0.15s, color 0.15s;
+}
+.qrClose:hover { border-color: var(--color-teal); color: var(--color-teal); }
 
 .main {
   flex: 1;

@@ -215,16 +215,16 @@ const map = new maplibregl.Map({
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
       })
-      // Navy border layer (rendered below station markers)
+      // Black border layer (rendered below station markers)
       map.addLayer({ id: 'conn-bg', type: 'line', source: 'station-connections',
-        paint: { 'line-color': '#0d1b3e', 'line-width': 6 } })
-      // White fill layer on top of navy
+        paint: { 'line-color': '#8A7F72', 'line-width': 6 } })
+      // White fill layer on top of black
       map.addLayer({ id: 'conn-fg', type: 'line', source: 'station-connections',
         paint: { 'line-color': '#ffffff', 'line-width': 3 } })
+      renderMarkers(map)
     })
 
     mapRef.current = map
-    renderMarkers(map)
 
     return () => { map.remove(); mapRef.current = null }
   }, [loading])
@@ -269,7 +269,7 @@ const map = new maplibregl.Map({
         const dot = el.querySelector('.station-dot') as HTMLElement | null
         if (dot) {
           dot.style.background = color ?? '#ffffff'
-          dot.style.border = color ? 'none' : '2.5px dashed #8A7F72'
+          dot.style.border = color ? 'none' : '2.5px solid #8A7F72'
           dot.style.animation = color ? 'none' : 'dashRotate 3s linear infinite'
         }
       } else {
@@ -279,7 +279,7 @@ const map = new maplibregl.Map({
         const dot = document.createElement('div')
         dot.className = `station-dot ${styles.stationDot}`
         dot.style.background = color ?? '#ffffff'
-        dot.style.border = color ? '2.5px solid rgba(255,255,255,0.8)' : '2.5px dashed #8A7F72'
+        dot.style.border = color ? '5px solid rgba(255,255,255,0.8)' : '5px solid #8A7F72'
         el.appendChild(dot)
 
         el.addEventListener('click', (e) => {

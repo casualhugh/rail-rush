@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { pb, api } from '../lib/pb'
 import styles from './Lobby.module.css'
 
@@ -33,6 +34,7 @@ export default function Lobby() {
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
+  const [showQR, setShowQR] = useState(false)
   const unsubRef = useRef<Array<() => void>>([])
   const teamIdsRef = useRef<string[]>([])
 
@@ -160,9 +162,11 @@ export default function Lobby() {
       <header className={styles.header}>
         <h1 className={styles.gameName}>{game.name}</h1>
         <div className={styles.headerRight}>
-          <span className={styles.badge}>Lobby</span>
           {game.inviteCode && (
-            <span className={styles.gameCode}>{game.inviteCode}</span>
+            <button className={styles.gameCodeBtn} onClick={() => setShowQR(true)}>
+              <span className={styles.gameCodeLabel}>Game code</span>
+              <span className={styles.gameCode}>{game.inviteCode}</span>
+            </button>
           )}
         </div>
       </header>
@@ -273,6 +277,24 @@ export default function Lobby() {
 
         {!isHost && error && <p className={styles.error}>{error}</p>}
       </div>
+
+      {showQR && game.inviteCode && (
+        <div className={styles.qrOverlay} onClick={() => setShowQR(false)}>
+          <div className={styles.qrModal} onClick={e => e.stopPropagation()}>
+            <p className={styles.qrTitle}>{game.name}</p>
+            <QRCodeSVG
+              value={`${window.location.origin}/join/${game.inviteCode}`}
+              size={220}
+              bgColor="#fff"
+              fgColor="#1a1a1a"
+              level="M"
+            />
+            <p className={styles.qrCode}>{game.inviteCode}</p>
+            <p className={styles.qrHint}>Scan to join the game</p>
+            <button className={styles.qrClose} onClick={() => setShowQR(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

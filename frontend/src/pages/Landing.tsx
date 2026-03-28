@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb'
 import styles from './Landing.module.css'
 
 export default function Landing() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<'idle' | 'login' | 'signup'>('idle')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,7 +24,7 @@ export default function Landing() {
         await pb.collection('users').create({ email, password, passwordConfirm: password, name })
         await pb.collection('users').authWithPassword(email, password)
       }
-      navigate('/dashboard')
+      navigate(searchParams.get('redirect') || '/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {

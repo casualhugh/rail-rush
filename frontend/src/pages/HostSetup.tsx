@@ -111,8 +111,10 @@ export default function HostSetup() {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
       })
-      map.addLayer({ id: 'conn-line', type: 'line', source: 'station-connections',
-        paint: { 'line-color': '#0d1b3e', 'line-width': 4 } })
+      map.addLayer({ id: 'conn-bg', type: 'line', source: 'station-connections',
+        paint: { 'line-color': '#000000', 'line-width': 6 } })
+      map.addLayer({ id: 'conn-fg', type: 'line', source: 'station-connections',
+        paint: { 'line-color': '#ffffff', 'line-width': 3 } })
 
       // Re-add markers and connections when returning to step 2
       for (const pin of stationsRef.current) {

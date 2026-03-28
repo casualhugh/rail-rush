@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb, api } from '../lib/pb'
 import styles from './Dashboard.module.css'
 
@@ -14,6 +14,7 @@ interface GameSummary {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const user = pb.authStore.model
   const [games, setGames] = useState<GameSummary[]>([])
   const [joinCode, setJoinCode] = useState('')
@@ -23,7 +24,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadGames()
+    const code = searchParams.get('join')
+    if (code) autoJoin(code.toUpperCase())
   }, [])
+
+  async function autoJoin(code: string) {
+    try {
+      const results = await pb.collection('games').getList(1, 1, {
+        filter: `invite_code = "${code}"`,
+      })
+      if (results.items.length === 0) {
+        setJoinError('No game found with that code')
+        setJoinCode(code)
+        return
+      }
+      navigate(`/game/${results.items[0].id}/lobby`)
+    } catch {
+      setJoinError('Invalid code')
+      setJoinCode(code)
+    }
+  }
 
   async function loadGames() {
     try {

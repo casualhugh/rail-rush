@@ -8,6 +8,7 @@ import HostSetup from './pages/HostSetup'
 import Lobby from './pages/Lobby'
 import GameMap from './pages/GameMap'
 import EndScreen from './pages/EndScreen'
+import JoinRedirect from './pages/JoinRedirect'
 
 function App() {
   const [authed, setAuthed] = useState(pb.authStore.isValid)
@@ -23,6 +24,7 @@ function App() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<Landing />} />
+      <Route path="/join/:code" element={<JoinRedirect />} />
 
       {/* Authenticated */}
       <Route path="/dashboard" element={authed ? <Dashboard /> : <Navigate to="/" replace />} />
