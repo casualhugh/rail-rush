@@ -29,7 +29,7 @@ routerAdd("POST", "/api/rr/osm/stations", (e) => {
 
   // Build Overpass query using the polygon
   const polyStr = polygon.map(p => `${p[0]} ${p[1]}`).join(' ');
-  const query = `[out:json][timeout:10];(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}"););out;`;
+  const query = `[out:json][timeout:10];(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}");node["railway"="tram_stop"](poly:"${polyStr}"););out;`;
 
   const MIRRORS = [
     "https://overpass-api.de/api/interpreter",

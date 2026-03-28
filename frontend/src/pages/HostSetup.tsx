@@ -22,7 +22,7 @@ const PRESET_COLORS = [
 ]
 
 type DrawMode = 'pin' | 'polygon' | 'connect'
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5
 
 export default function HostSetup() {
   const navigate = useNavigate()
@@ -45,6 +45,9 @@ export default function HostSetup() {
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([])
   const polygonLayerRef = useRef<maplibregl.Marker[]>([])
   const [osmLoading, setOsmLoading] = useState(false)
+  const [incStations, setIncStations] = useState(true)
+  const [incHalts, setIncHalts] = useState(true)
+  const [incTrams, setIncTrams] = useState(false)
   const drawModeRef = useRef<DrawMode>('pin')
   const polygonPointsRef = useRef<[number, number][]>([])
   const [connections, setConnections] = useState<[string, string][]>([])
@@ -72,13 +75,6 @@ export default function HostSetup() {
     { name: 'Team Teal', color: PRESET_COLORS[0] },
     { name: 'Team Orange', color: PRESET_COLORS[1] },
   ])
-
-  // Step 6
-  const [createdGame, setCreatedGame] = useState<{
-    gameId: string
-    inviteCode: string
-    teams: Array<{ id: string; name: string; color: string }>
-  } | null>(null)
 
   // Keep refs in sync for use inside map click closures
   useEffect(() => { stationsRef.current = stations }, [stations])
@@ -117,6 +113,32 @@ export default function HostSetup() {
       })
       map.addLayer({ id: 'conn-line', type: 'line', source: 'station-connections',
         paint: { 'line-color': '#0d1b3e', 'line-width': 4 } })
+
+      // Re-add markers and connections when returning to step 2
+      for (const pin of stationsRef.current) {
+        const el = document.createElement('div')
+        el.className = styles.mapPin
+        const dot = document.createElement('div')
+        dot.className = styles.mapPinDot
+        el.appendChild(dot)
+        const marker = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([pin.lng, pin.lat]).addTo(map)
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation()
+          if (drawModeRef.current === 'connect') { handleConnectClick(pin.tempId); return }
+          const current = stationsRef.current.find(s => s.tempId === pin.tempId)
+          if (current) { setEditingStation(current); setEditName(current.name) }
+        })
+        marker.on('dragend', () => {
+          const { lat, lng } = marker.getLngLat()
+          setStations(prev => {
+            const updated = prev.map(s => s.tempId === pin.tempId ? { ...s, lat, lng } : s)
+            updateConnectionLayer(connectionsRef.current, updated)
+            return updated
+          })
+        })
+        markersRef.current.set(pin.tempId, marker)
+      }
+      updateConnectionLayer(connectionsRef.current, stationsRef.current)
     })
 
     map.on('click', (e) => {
@@ -149,7 +171,7 @@ export default function HostSetup() {
       dot.className = styles.mapPinDot
       el.appendChild(dot)
 
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el, draggable: true })
         .setLngLat([lng, lat])
         .addTo(map)
 
@@ -164,6 +186,14 @@ export default function HostSetup() {
           setEditingStation(current)
           setEditName(current.name)
         }
+      })
+      marker.on('dragend', () => {
+        const { lat: newLat, lng: newLng } = marker.getLngLat()
+        setStations(prev => {
+          const updated = prev.map(s => s.tempId === tempId ? { ...s, lat: newLat, lng: newLng } : s)
+          updateConnectionLayer(connectionsRef.current, updated)
+          return updated
+        })
       })
 
       markersRef.current.set(tempId, marker)
@@ -238,6 +268,16 @@ export default function HostSetup() {
     setConnectingFrom(null)
   }
 
+  function clearAllStations() {
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current.clear()
+    setStations([])
+    setConnections([])
+    updateConnectionLayer([], [])
+    setEditingStation(null)
+    setConnectingFrom(null)
+  }
+
   function clearPolygonMarkers() {
     polygonLayerRef.current.forEach(m => m.remove())
     polygonLayerRef.current = []
@@ -250,9 +290,14 @@ export default function HostSetup() {
     try {
       const polyStr = polygonPoints.map(p => `${p[0]} ${p[1]}`).join(' ')
       // Also fetch railway ways so we can auto-derive connections between station nodes
+      const nodeFilters = [
+        incStations && `node["railway"="station"](poly:"${polyStr}");`,
+        incHalts    && `node["railway"="halt"](poly:"${polyStr}");`,
+        incTrams    && `node["railway"="tram_stop"](poly:"${polyStr}");`,
+      ].filter(Boolean).join('')
       const query = [
         `[out:json][timeout:30];`,
-        `(node["railway"="station"](poly:"${polyStr}");node["railway"="halt"](poly:"${polyStr}");)->.stations;`,
+        `(${nodeFilters})->.stations;`,
         `way["railway"~"^(rail|subway|tram|light_rail|monorail)$"](bn.stations)->.ways;`,
         `.ways out geom;`,
         `.stations out;`,
@@ -276,17 +321,28 @@ export default function HostSetup() {
       const nodeElements = (data.elements || []).filter((el): el is OsmNode => el.type === 'node')
       const wayElements  = (data.elements || []).filter((el): el is OsmWay  => el.type === 'way')
 
-      const newPins: StationPin[] = nodeElements
-        .filter(n => !stations.some(existing =>
+      // Deduplicate: same name + within ~150m → merge into one pin (handles bidirectional tram stops)
+      const MERGE_DIST = 0.0015
+      const osmIdToTempId = new Map<number, string>()
+      const newPins: StationPin[] = []
+      for (const n of nodeElements) {
+        if (stations.some(existing =>
           Math.abs(existing.lat - n.lat) < 0.0001 && Math.abs(existing.lng - n.lon) < 0.0001
-        ))
-        .map(n => ({
-          name: n.tags?.name || n.tags?.['name:en'] || 'Unnamed Station',
-          lat: n.lat,
-          lng: n.lon,
-          tempId: crypto.randomUUID(),
-          osmNodeId: n.id,
-        }))
+        )) continue
+        const name = n.tags?.name || n.tags?.['name:en'] || 'Unnamed Station'
+        const match = newPins.find(p =>
+          p.name === name &&
+          Math.abs(p.lat - n.lat) < MERGE_DIST &&
+          Math.abs(p.lng - n.lon) < MERGE_DIST
+        )
+        if (match) {
+          osmIdToTempId.set(n.id, match.tempId)
+        } else {
+          const tempId = crypto.randomUUID()
+          newPins.push({ name, lat: n.lat, lng: n.lon, tempId, osmNodeId: n.id })
+          osmIdToTempId.set(n.id, tempId)
+        }
+      }
 
       for (const pin of newPins) {
         const el = document.createElement('div')
@@ -294,18 +350,25 @@ export default function HostSetup() {
         const dot = document.createElement('div')
         dot.className = styles.mapPinDot
         el.appendChild(dot)
-        const marker = new maplibregl.Marker({ element: el }).setLngLat([pin.lng, pin.lat]).addTo(mapRef.current!)
+        const marker = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([pin.lng, pin.lat]).addTo(mapRef.current!)
         el.addEventListener('click', (ev) => {
           ev.stopPropagation()
           if (drawModeRef.current === 'connect') { handleConnectClick(pin.tempId); return }
           const current = stationsRef.current.find(s => s.tempId === pin.tempId)
           if (current) { setEditingStation(current); setEditName(current.name) }
         })
+        marker.on('dragend', () => {
+          const { lat, lng } = marker.getLngLat()
+          setStations(prev => {
+            const updated = prev.map(s => s.tempId === pin.tempId ? { ...s, lat, lng } : s)
+            updateConnectionLayer(connectionsRef.current, updated)
+            return updated
+          })
+        })
         markersRef.current.set(pin.tempId, marker)
       }
 
       // Auto-derive connections from OSM railway ways
-      const osmIdToTempId = new Map(newPins.map(p => [p.osmNodeId!, p.tempId]))
       const newConnections: [string, string][] = []
       for (const way of wayElements) {
         // Collect station tempIds that appear on this way, in node order
@@ -315,6 +378,7 @@ export default function HostSetup() {
         // Connect consecutive stations on the same way
         for (let i = 0; i < stationsOnWay.length - 1; i++) {
           const a = stationsOnWay[i], b = stationsOnWay[i + 1]
+          if (a === b) continue
           const alreadyExists = [...connectionsRef.current, ...newConnections].some(
             ([x, y]) => (x === a && y === b) || (x === b && y === a)
           )
@@ -394,8 +458,7 @@ export default function HostSetup() {
         })
       }
 
-      setCreatedGame(result)
-      setStep(6)
+      navigate(`/game/${result.gameId}/lobby`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create game')
     } finally {
@@ -443,7 +506,7 @@ export default function HostSetup() {
               <button
                 className={drawMode === 'polygon' ? styles.toolActive : styles.tool}
                 onClick={() => { setDrawMode('polygon'); setConnectingFrom(null) }}
-              >⬡ Draw Area</button>
+              >⬡ Draw Search Area</button>
               {stations.length >= 2 && (
                 <button
                   className={drawMode === 'connect' ? styles.toolActive : styles.tool}
@@ -456,13 +519,35 @@ export default function HostSetup() {
                 </span>
               )}
               {drawMode === 'polygon' && polygonPoints.length >= 3 && (
-                <button className={styles.toolAction} onClick={fetchOsmStations} disabled={osmLoading}>
-                  {osmLoading ? 'Searching…' : `Search OSM (${polygonPoints.length} pts)`}
-                </button>
+                <>
+                  <button className={styles.toolAction} onClick={fetchOsmStations}
+                    disabled={osmLoading || (!incStations && !incHalts && !incTrams)}>
+                    {osmLoading ? 'Searching…' : `Search for Stations (${polygonPoints.length} pts)`}
+                  </button>
+                  <span className={styles.osmTypeFilters}>
+                    <label className={styles.osmTypeLabel}>
+                      <input type="checkbox" checked={incStations} onChange={e => setIncStations(e.target.checked)} />
+                      Stations
+                    </label>
+                    <label className={styles.osmTypeLabel}>
+                      <input type="checkbox" checked={incHalts} onChange={e => setIncHalts(e.target.checked)} />
+                      Halts
+                    </label>
+                    <label className={styles.osmTypeLabel}>
+                      <input type="checkbox" checked={incTrams} onChange={e => setIncTrams(e.target.checked)} />
+                      Trams
+                    </label>
+                  </span>
+                </>
               )}
               {drawMode === 'polygon' && polygonPoints.length > 0 && (
                 <button className={styles.toolClear} onClick={() => { setPolygonPoints([]); clearPolygonMarkers() }}>
                   Clear Polygon
+                </button>
+              )}
+              {stations.length > 0 && (
+                <button className={styles.toolClear} onClick={clearAllStations}>
+                  Clear All
                 </button>
               )}
             </div>
@@ -639,27 +724,6 @@ export default function HostSetup() {
             <button className={styles.launchBtn} onClick={launch}
               disabled={saving || teams.some(t => !t.name.trim())}>
               {saving ? 'Creating…' : 'Create & Open Lobby'}
-            </button>
-          </div>
-        )}
-
-        {step === 6 && createdGame && (
-          <div className={styles.stepPanel}>
-            <h2 className={styles.stepTitle}>Game Ready!</h2>
-            <p className={styles.hint}>Share this code with all players. They'll pick their team in the lobby.</p>
-            <div className={styles.gameInviteBlock}>
-              <span className={styles.gameInviteLabel}>Game Code</span>
-              <span className={styles.gameInviteCode}>{createdGame.inviteCode}</span>
-            </div>
-            <p className={styles.hint} style={{ marginTop: '0.5rem' }}>Teams</p>
-            {createdGame.teams.map(t => (
-              <div key={t.id} className={styles.inviteCard} style={{ borderColor: t.color }}>
-                <div className={styles.inviteTeamDot} style={{ background: t.color }} />
-                <span className={styles.inviteTeamName}>{t.name}</span>
-              </div>
-            ))}
-            <button className={styles.launchBtn} onClick={() => navigate(`/game/${createdGame.gameId}/lobby`)}>
-              Open Lobby →
             </button>
           </div>
         )}
