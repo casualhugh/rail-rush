@@ -418,3 +418,85 @@ routerAdd("DELETE", "/api/rr/station/{stationId}", (e) => {
 
   return e.json(200, { ok: true, coinsRefunded, refundedTeamId });
 });
+
+
+// POST /api/rr/station/{stationId}/connect
+// Body: { neighborId }
+// Host-only, active game. Adds a bidirectional connection.
+routerAdd("POST", "/api/rr/station/{stationId}/connect", (e) => {
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const stationId = e.request.pathValue("stationId");
+  const body = e.requestInfo().body;
+  const neighborId = body.neighborId;
+  if (!neighborId) throw new BadRequestError("neighborId is required");
+  if (neighborId === stationId) throw new BadRequestError("cannot connect a station to itself");
+
+  let station;
+  try { station = e.app.findRecordById("stations", stationId); }
+  catch (_) { throw new NotFoundError("station not found"); }
+
+  let neighbor;
+  try { neighbor = e.app.findRecordById("stations", neighborId); }
+  catch (_) { throw new NotFoundError("neighbor not found"); }
+
+  const game = e.app.findRecordById("games", station.get("game_id"));
+  if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can edit connections");
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+  if (neighbor.get("game_id") !== game.id) throw new BadRequestError("stations belong to different games");
+
+  let connA = station.get("connected_to"); if (!Array.isArray(connA)) connA = [];
+  if (connA.includes(neighborId)) throw new BadRequestError("already connected");
+
+  e.app.runInTransaction((txApp) => {
+    station.set("connected_to", [...connA, neighborId]);
+    txApp.save(station);
+
+    let connB = neighbor.get("connected_to"); if (!Array.isArray(connB)) connB = [];
+    if (!connB.includes(stationId)) { connB.push(stationId); }
+    neighbor.set("connected_to", connB);
+    txApp.save(neighbor);
+  });
+
+  return e.json(200, { ok: true });
+});
+
+
+// POST /api/rr/station/{stationId}/disconnect
+// Body: { neighborId }
+// Host-only, active game. Removes a bidirectional connection.
+routerAdd("POST", "/api/rr/station/{stationId}/disconnect", (e) => {
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const stationId = e.request.pathValue("stationId");
+  const body = e.requestInfo().body;
+  const neighborId = body.neighborId;
+  if (!neighborId) throw new BadRequestError("neighborId is required");
+
+  let station;
+  try { station = e.app.findRecordById("stations", stationId); }
+  catch (_) { throw new NotFoundError("station not found"); }
+
+  let neighbor;
+  try { neighbor = e.app.findRecordById("stations", neighborId); }
+  catch (_) { throw new NotFoundError("neighbor not found"); }
+
+  const game = e.app.findRecordById("games", station.get("game_id"));
+  if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can edit connections");
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+  if (neighbor.get("game_id") !== game.id) throw new BadRequestError("stations belong to different games");
+
+  e.app.runInTransaction((txApp) => {
+    let connA = station.get("connected_to"); if (!Array.isArray(connA)) connA = [];
+    station.set("connected_to", connA.filter(id => id !== neighborId));
+    txApp.save(station);
+
+    let connB = neighbor.get("connected_to"); if (!Array.isArray(connB)) connB = [];
+    neighbor.set("connected_to", connB.filter(id => id !== stationId));
+    txApp.save(neighbor);
+  });
+
+  return e.json(200, { ok: true });
+});
