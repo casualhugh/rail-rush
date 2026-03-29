@@ -93,6 +93,18 @@ export const reinforceStation = (stationId: string, teamId: string, coins: numbe
     `/api/rr/station/${stationId}/reinforce`, { teamId, coins }
   )
 
+export const addStation = (gameId: string, body: { name: string; lat: number; lng: number }) =>
+  api.post<{ id: string; name: string; lat: number; lng: number }>(`/api/rr/game/${gameId}/station/add`, body)
+
+export const deleteStation = (stationId: string) =>
+  api.delete<{ ok: boolean; coinsRefunded: number; refundedTeamId: string | null }>(`/api/rr/station/${stationId}`)
+
+export const connectStations = (stationId: string, neighborId: string) =>
+  api.post<{ ok: boolean }>(`/api/rr/station/${stationId}/connect`, { neighborId })
+
+export const disconnectStations = (stationId: string, neighborId: string) =>
+  api.post<{ ok: boolean }>(`/api/rr/station/${stationId}/disconnect`, { neighborId })
+
 // ── Challenges ────────────────────────────────────────────────────────────────
 
 export const completeChallenge = (challengeId: string, teamId: string) =>

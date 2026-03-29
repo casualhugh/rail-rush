@@ -117,6 +117,7 @@ interface GameStore {
   updateStation: (record: Record<string, unknown>) => void
   updateChallenge: (record: Record<string, unknown>) => void
   updateTeamMember: (record: Record<string, unknown>) => void
+  removeStation: (id: string) => void
 }
 
 // ── Helper: map PB records to typed objects ───────────────────────────────────
@@ -273,4 +274,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     })
   },
+
+  removeStation: (id) => set(s => ({
+    stations: s.stations.filter(st => st.id !== id),
+  })),
 }))

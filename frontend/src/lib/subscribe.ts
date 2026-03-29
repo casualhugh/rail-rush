@@ -34,8 +34,14 @@ export async function subscribeToGame(gameId: string): Promise<UnsubscribeFn> {
 
   // ── Stations (ownership changes) ─────────────────────────────────────────
   const unsubStations = await pb.collection('stations').subscribe('*', (e) => {
-    if (e.record.game_id !== gameId) return
-    store.updateStation(e.record)
+    if (e.action === 'delete') {
+      // game_id may be absent on delete tombstone; guard using local store instead
+      const exists = useGameStore.getState().stations.some(s => s.id === e.record.id)
+      if (exists) store.removeStation(e.record.id)
+    } else {
+      if (e.record.game_id !== gameId) return
+      store.updateStation(e.record)
+    }
   })
   unsubs.push(unsubStations)
 
