@@ -341,3 +341,80 @@ routerAdd("POST", "/api/rr/game/{gameId}/station/add", (e) => {
 
   return e.json(201, { id: station.id, name: station.get("name"), lat, lng });
 });
+
+
+// DELETE /api/rr/station/{stationId}
+// Host-only, active game. Deletes a station with full cleanup:
+//   - refunds current_stake to current owner
+//   - fails any active/pending_approval challenge pinned to it
+//   - removes station from all neighbours' connected_to
+//   - calls _drawChallenges after deletion
+routerAdd("DELETE", "/api/rr/station/{stationId}", (e) => {
+  const { _drawChallenges } = require(`${__hooks}/shared.js`);
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const stationId = e.request.pathValue("stationId");
+
+  let station;
+  try { station = e.app.findRecordById("stations", stationId); }
+  catch (_) { throw new NotFoundError("station not found"); }
+
+  let game;
+  try { game = e.app.findRecordById("games", station.get("game_id")); }
+  catch (_) { throw new NotFoundError("game not found"); }
+  if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can delete stations");
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  let coinsRefunded = 0;
+  let refundedTeamId = null;
+
+  e.app.runInTransaction((txApp) => {
+    // 1. Refund current stake to current owner only
+    const ownerTeamId = station.get("current_owner_team_id");
+    const currentStake = station.get("current_stake") || 0;
+    if (ownerTeamId && currentStake > 0) {
+      const ownerTeam = txApp.findRecordById("teams", ownerTeamId);
+      ownerTeam.set("coin_balance", (ownerTeam.get("coin_balance") || 0) + currentStake);
+      txApp.save(ownerTeam);
+      coinsRefunded = currentStake;
+      refundedTeamId = ownerTeamId;
+    }
+
+    // 2. Fail any active or pending_approval challenge at this station
+    const challenges = txApp.findRecordsByFilter(
+      "challenges",
+      "station_id = {:stationId} && (status = 'active' || status = 'pending_approval')",
+      "", 0, 0, { stationId }
+    );
+    for (const challenge of challenges) {
+      challenge.set("status",             "failed");
+      challenge.set("attempting_team_id", "");
+      challenge.set("completed_by_team_id", "");
+      txApp.save(challenge);
+    }
+
+    // 3. Remove stationId from all neighbours' connected_to
+    const neighbours = txApp.findRecordsByFilter(
+      "stations",
+      "game_id = {:gameId}",
+      "", 0, 0, { gameId: game.id }
+    );
+    for (const nb of neighbours) {
+      if (nb.id === stationId) continue;
+      let connectedTo = nb.get("connected_to");
+      if (!Array.isArray(connectedTo)) connectedTo = [];
+      if (!connectedTo.includes(stationId)) continue;
+      nb.set("connected_to", connectedTo.filter(id => id !== stationId));
+      txApp.save(nb);
+    }
+
+    // 4. Delete the station
+    txApp.delete(station);
+  });
+
+  // 5. Replenish challenge pool if a challenge was force-failed
+  _drawChallenges(e.app, game);
+
+  return e.json(200, { ok: true, coinsRefunded, refundedTeamId });
+});
