@@ -298,3 +298,46 @@ routerAdd("POST", "/api/rr/game/{gameId}/stations", (e) => {
 
   return e.json(201, { created: created.length, stations: created });
 });
+
+
+// POST /api/rr/game/{gameId}/station/add
+// Body: { name, lat, lng }
+// Host-only, active game. Adds a single new station mid-game.
+routerAdd("POST", "/api/rr/game/{gameId}/station/add", (e) => {
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const gameId = e.request.pathValue("gameId");
+
+  let game;
+  try { game = e.app.findRecordById("games", gameId); }
+  catch (_) { throw new NotFoundError("game not found"); }
+
+  if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can add stations");
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  const body = e.requestInfo().body;
+  const name = body.name;
+  const lat  = parseFloat(body.lat);
+  const lng  = parseFloat(body.lng);
+
+  if (!name || typeof name !== "string" || name.trim() === "") throw new BadRequestError("name is required");
+  if (isNaN(lat) || lat < -90  || lat > 90)   throw new BadRequestError("invalid lat");
+  if (isNaN(lng) || lng < -180 || lng > 180)  throw new BadRequestError("invalid lng");
+
+  const existing = e.app.findRecordsByFilter("stations", "game_id = {:gameId}", "", 0, 0, { gameId });
+  if (existing.length >= 500) throw new BadRequestError("station limit of 500 reached");
+
+  const col = e.app.findCollectionByNameOrId("stations");
+  const station = new Record(col);
+  station.set("game_id",            gameId);
+  station.set("name",               name.trim());
+  station.set("lat",                lat);
+  station.set("lng",                lng);
+  station.set("current_stake",      0);
+  station.set("is_challenge_location", false);
+  station.set("connected_to",       []);
+  e.app.save(station);
+
+  return e.json(201, { id: station.id, name: station.get("name"), lat, lng });
+});
