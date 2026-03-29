@@ -513,7 +513,7 @@ export default function HostSetup() {
                 <button
                   className={drawMode === 'connect' ? styles.toolActive : styles.tool}
                   onClick={() => { setDrawMode('connect'); setPolygonPoints([]); clearPolygonMarkers() }}
-                >🔗 Connect</button>
+                >🔗 Connect / Disconnect</button>
               )}
               {drawMode === 'connect' && connectingFrom && (
                 <span className={styles.connectHint}>
@@ -562,6 +562,30 @@ export default function HostSetup() {
                   <button className={styles.dangerBtn} onClick={() => removeStation(editingStation.tempId)}>Remove</button>
                   <button className={styles.cancelBtn} onClick={() => setEditingStation(null)}>Cancel</button>
                 </div>
+                {connections.some(([a, b]) => a === editingStation.tempId || b === editingStation.tempId) && (
+                  <div className={styles.connList}>
+                    <span className={styles.connListLabel}>Connections</span>
+                    {connections
+                      .filter(([a, b]) => a === editingStation.tempId || b === editingStation.tempId)
+                      .map(([a, b]) => {
+                        const otherId = a === editingStation.tempId ? b : a
+                        const other = stations.find(s => s.tempId === otherId)
+                        if (!other) return null
+                        return (
+                          <div key={otherId} className={styles.connItem}>
+                            <span>{other.name}</span>
+                            <button className={styles.iconBtnDanger} onClick={() => {
+                              const next: [string, string][] = connections.filter(([ca, cb]) =>
+                                !((ca === editingStation.tempId && cb === otherId) || (ca === otherId && cb === editingStation.tempId))
+                              )
+                              setConnections(next)
+                              updateConnectionLayer(next, stations)
+                            }}>✕</button>
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
               </div>
             )}
             <div className={styles.stationList}>
