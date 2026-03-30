@@ -18,6 +18,7 @@ Three coordinated changes: a new backend endpoint to persist position changes, a
 **File:** `backend/pb_hooks/stations.pb.js`
 
 - Auth required; caller must be the game's host; game must be `active`.
+- `stationId` comes from the path. `game_id` is derived from the station record (not supplied in the body), consistent with the delete and connect endpoints.
 - Body: `{ lat: number, lng: number }`.
 - Validates lat ∈ [-90, 90] and lng ∈ [-180, 180].
 - Updates the station record's `lat` and `lng` fields and saves.
@@ -46,7 +47,8 @@ export const moveStation = (stationId: string, lat: number, lng: number) =>
 
 ```ts
 const isEditingMapRef = useRef(false)
-const dragHandlerMapRef = useRef<Map<string, () => void>>(new Map())
+// Handler type must match MapLibre's event signature so marker.on / marker.off accept the same reference
+const dragHandlerMapRef = useRef<Map<string, (e: maplibregl.MapLibreEvent) => void>>(new Map())
 ```
 
 Keep `isEditingMapRef` in sync so closures inside `renderMarkers` can read the current value:
@@ -61,6 +63,8 @@ When creating a new station marker, check `isEditingMapRef.current`. If in edit 
 - Attach a `dragend` handler that calls `moveStation(station.id, lat, lng)` (fire-and-forget; errors are swallowed silently, consistent with the rest of the overlay).
 - Store the handler in `dragHandlerMapRef` for later cleanup.
 
+**Important:** `renderMarkers` does NOT call `marker.setLngLat` on markers that already exist in `markerMapRef` — it only updates the dot color. This must remain true; adding a `setLngLat` call for existing markers would snap pins back to the last-saved position mid-drag.
+
 ### Toggle effect
 
 ```ts
@@ -69,7 +73,7 @@ useEffect(() => {
     if (isEditingMap) {
       marker.setDraggable(true)
       if (!dragHandlerMapRef.current.has(stationId)) {
-        const handler = () => {
+        const handler = (_e: maplibregl.MapLibreEvent) => {
           const { lat, lng } = marker.getLngLat()
           moveStation(stationId, lat, lng).catch(() => {})
         }
@@ -90,6 +94,8 @@ useEffect(() => {
 
 This runs whenever edit mode is toggled, catching all markers that already exist. Markers created *while* edit mode is active are handled at creation time (see above).
 
+**Mid-drag close:** If the user closes edit mode while a drag is in progress (pointer still down), MapLibre fires `dragend` after pointer lift using the already-registered closure — `moveStation` will still be called. This is accepted as benign: the move is valid and the backend will persist it correctly.
+
 ---
 
 ## Data flow on drag
@@ -100,7 +106,7 @@ This runs whenever edit mode is toggled, catching all markers that already exist
 4. `subscribe.ts` receives the update → `store.updateStation(record)`.
 5. Zustand triggers re-render → `useEffect([store.stations])` fires → `renderMarkers` updates the GeoJSON connection-line source with the new coordinates.
 
-Connection lines snap to the dragged position within one SSE round-trip (~50 ms on localhost).
+Connection lines snap to the dragged position within one SSE round-trip. On localhost this is ~50 ms; on a mobile network it may be several hundred ms. This lag is accepted as a trade-off — no optimistic store update is performed. The MapLibre marker itself moves instantly (MapLibre owns its DOM position); only the GeoJSON connection-line layer lags behind.
 
 ---
 
