@@ -9,6 +9,7 @@ import ScorePanel from '../components/ScorePanel'
 import StationModal from '../components/StationModal'
 import ChallengeModal from '../components/ChallengeModal'
 import EventFeed from '../components/EventFeed'
+import StationEditorOverlay from '../components/StationEditorOverlay'
 import styles from './GameMap.module.css'
 
 export default function GameMap() {
@@ -20,6 +21,9 @@ export default function GameMap() {
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerMapRef = useRef<Map<string, maplibregl.Marker>>(new Map())
   const challengeMarkerMapRef = useRef<Map<string, maplibregl.Marker>>(new Map())
+
+  const [isEditingMap, setIsEditingMap] = useState(false)
+  const editStationHandlerRef = useRef<((id: string, x: number, y: number) => void) | null>(null)
 
   const [loading, setLoading] = useState(true)
   const [isReconnecting, setIsReconnecting] = useState(false)
@@ -288,7 +292,12 @@ const map = new maplibregl.Map({
 
         el.addEventListener('click', (e) => {
           e.stopPropagation()
-          setSelectedStationId(station.id)
+          if (editStationHandlerRef.current) {
+            const rect = (e.target as HTMLElement).getBoundingClientRect()
+            editStationHandlerRef.current(station.id, rect.left + rect.width / 2, rect.top)
+          } else {
+            setSelectedStationId(station.id)
+          }
         })
 
         const marker = new maplibregl.Marker({ element: el })
@@ -298,6 +307,15 @@ const map = new maplibregl.Map({
         markerMapRef.current.set(station.id, marker)
       }
 
+    }
+
+    // Remove markers for stations that no longer exist
+    const currentStationIds = new Set(stations.map(s => s.id))
+    for (const [sid, marker] of markerMapRef.current) {
+      if (!currentStationIds.has(sid)) {
+        marker.remove()
+        markerMapRef.current.delete(sid)
+      }
     }
 
     // Challenge badges — driven from active challenges so new draws appear
@@ -374,6 +392,14 @@ const map = new maplibregl.Map({
           {showFeed ? '✕' : '📋'}
         </button>
         {isHost && (
+          <button
+            className={styles.editMapBtn}
+            onClick={() => { setIsEditingMap(o => !o); setSelectedStationId(null) }}
+          >
+            {isEditingMap ? 'Editing…' : 'Edit Map'}
+          </button>
+        )}
+        {isHost && (
           <button className={styles.endBtn} onClick={handleEndGame} disabled={ending}>
             {ending ? '…' : 'End Game'}
           </button>
@@ -419,6 +445,16 @@ const map = new maplibregl.Map({
           />
         )
       })()}
+
+      {/* Station editor overlay (host only) */}
+      {isEditingMap && isHost && (
+        <StationEditorOverlay
+          gameId={gameId!}
+          mapRef={mapRef}
+          editStationHandlerRef={editStationHandlerRef}
+          onClose={() => setIsEditingMap(false)}
+        />
+      )}
     </div>
   )
 }
