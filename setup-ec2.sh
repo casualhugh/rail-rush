@@ -59,8 +59,8 @@ echo ""
 # Step 1 — System packages
 # =============================================================================
 echo "[1/8] Installing system packages..."
-apt-get update -qq
-apt-get install -y -qq \
+yum update -qq
+yum install -y -qq \
   git \
   unzip \
   curl \
@@ -71,7 +71,7 @@ apt-get install -y -qq \
 if ! command -v node &>/dev/null; then
   echo "      Installing Node.js 20 LTS..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - &>/dev/null
-  apt-get install -y -qq nodejs
+  yum install -y -qq nodejs
 fi
 echo "      node $(node --version)  npm $(npm --version)"
 
