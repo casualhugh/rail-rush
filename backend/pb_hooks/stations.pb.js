@@ -501,3 +501,37 @@ routerAdd("POST", "/api/rr/station/{stationId}/disconnect", (e) => {
 
   return e.json(200, { ok: true });
 });
+
+
+// PATCH /api/rr/station/{stationId}/move
+// Host-only, active game. Updates lat/lng for a station.
+routerAdd("PATCH", "/api/rr/station/{stationId}/move", (e) => {
+  const authRecord = e.auth;
+  if (!authRecord) throw new UnauthorizedError("unauthenticated");
+
+  const stationId = e.request.pathValue("stationId");
+
+  let station;
+  try { station = e.app.findRecordById("stations", stationId); }
+  catch (_) { throw new NotFoundError("station not found"); }
+
+  let game;
+  try { game = e.app.findRecordById("games", station.get("game_id")); }
+  catch (_) { throw new NotFoundError("game not found"); }
+
+  if (game.get("host_user_id") !== authRecord.id) throw new ForbiddenError("only the host can move stations");
+  if (game.get("status") !== "active") throw new BadRequestError("game is not active");
+
+  const body = e.requestInfo().body;
+  const lat = parseFloat(body.lat);
+  const lng = parseFloat(body.lng);
+
+  if (isNaN(lat) || lat < -90  || lat > 90)   throw new BadRequestError("invalid lat");
+  if (isNaN(lng) || lng < -180 || lng > 180)  throw new BadRequestError("invalid lng");
+
+  station.set("lat", lat);
+  station.set("lng", lng);
+  e.app.save(station);
+
+  return e.json(200, { ok: true });
+});
