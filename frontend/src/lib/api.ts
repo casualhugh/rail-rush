@@ -105,6 +105,9 @@ export const connectStations = (stationId: string, neighborId: string) =>
 export const disconnectStations = (stationId: string, neighborId: string) =>
   api.post<{ ok: boolean }>(`/api/rr/station/${stationId}/disconnect`, { neighborId })
 
+export const moveStation = (stationId: string, lat: number, lng: number) =>
+  api.patch<{ ok: boolean }>(`/api/rr/station/${stationId}/move`, { lat, lng })
+
 // ── Challenges ────────────────────────────────────────────────────────────────
 
 export const completeChallenge = (challengeId: string, teamId: string) =>
