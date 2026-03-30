@@ -65,6 +65,23 @@ When creating a new station marker, check `isEditingMapRef.current`. If in edit 
 
 **Important:** `renderMarkers` does NOT call `marker.setLngLat` on markers that already exist in `markerMapRef` — it only updates the dot color. This must remain true; adding a `setLngLat` call for existing markers would snap pins back to the last-saved position mid-drag.
 
+### Station deletion cleanup
+
+When `renderMarkers` removes a deleted station from `markerMapRef`, it must also remove the corresponding entry from `dragHandlerMapRef`:
+
+```ts
+// existing deletion loop in renderMarkers:
+for (const [sid, marker] of markerMapRef.current) {
+  if (!currentStationIds.has(sid)) {
+    marker.remove()
+    markerMapRef.current.delete(sid)
+    dragHandlerMapRef.current.delete(sid)  // ← add this
+  }
+}
+```
+
+Without this, a stale function reference lingers in `dragHandlerMapRef` for the deleted station's ID. If edit mode is later toggled off, the `else` branch tries `marker.off(...)` on the already-removed marker — benign in practice (the marker is gone) but the `has()` guard in the toggle effect could also skip attaching a fresh handler if a station with the same ID were ever reused.
+
 ### Toggle effect
 
 ```ts
