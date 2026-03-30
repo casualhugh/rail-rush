@@ -450,12 +450,13 @@ routerAdd("POST", "/api/rr/station/{stationId}/connect", (e) => {
   if (connA.includes(neighborId)) throw new BadRequestError("already connected");
 
   e.app.runInTransaction((txApp) => {
-    station.set("connected_to", [...connA, neighborId]);
+    station.set("connected_to", connA.concat([neighborId]));
     txApp.save(station);
 
     let connB = neighbor.get("connected_to"); if (!Array.isArray(connB)) connB = [];
-    if (!connB.includes(stationId)) { connB.push(stationId); }
-    neighbor.set("connected_to", connB);
+    if (!connB.includes(stationId)) {
+      neighbor.set("connected_to", connB.concat([stationId]));
+    }
     txApp.save(neighbor);
   });
 
