@@ -37,7 +37,8 @@ export default function Landing() {
       {/* Hero */}
       <div className={styles.hero}>
         <h1 className={styles.title}>Rail Rush</h1>
-        <p className={styles.tagline}>Claim the network. Dominate the city.</p>
+        <p className={styles.tagline}>Own the rails. Rule the streets.</p>
+        <p className={styles.subtitle}>A real-world battle for your city's network.</p>
 
         {mode === 'idle' && (
           <div className={styles.ctaGroup}>
