@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import maplibregl from 'maplibre-gl'
 import { pb, api } from '../lib/pb'
+import { moveStation } from '../lib/api'
 import { subscribeToGame } from '../lib/subscribe'
 import { useGameStore, type Station, type Challenge } from '../store/gameStore'
 import CoinHUD from '../components/CoinHUD'
@@ -24,6 +25,8 @@ export default function GameMap() {
 
   const [isEditingMap, setIsEditingMap] = useState(false)
   const editStationHandlerRef = useRef<((id: string, x: number, y: number) => void) | null>(null)
+  const isEditingMapRef = useRef(false)
+  const dragHandlerMapRef = useRef<Map<string, (e: maplibregl.MapLibreEvent) => void>>(new Map())
 
   const [loading, setLoading] = useState(true)
   const [isReconnecting, setIsReconnecting] = useState(false)
@@ -195,6 +198,8 @@ export default function GameMap() {
     if (game?.status === 'ended') navigate(`/game/${gameId}/end`)
   }, [game?.status])
 
+  useEffect(() => { isEditingMapRef.current = isEditingMap }, [isEditingMap])
+
   // Init MapLibre after loading
   useEffect(() => {
     if (loading || !mapContainerRef.current || mapRef.current) return
@@ -238,6 +243,30 @@ const map = new maplibregl.Map({
     if (!mapRef.current) return
     renderMarkers(mapRef.current)
   }, [store.stations, store.challenges])
+
+  // Enable/disable marker dragging when edit mode is toggled
+  useEffect(() => {
+    for (const [stationId, marker] of markerMapRef.current) {
+      if (isEditingMap) {
+        marker.setDraggable(true)
+        if (!dragHandlerMapRef.current.has(stationId)) {
+          const handler = (_e: maplibregl.MapLibreEvent) => {
+            const { lat, lng } = marker.getLngLat()
+            moveStation(stationId, lat, lng).catch(() => {})
+          }
+          dragHandlerMapRef.current.set(stationId, handler)
+          marker.on('dragend', handler)
+        }
+      } else {
+        marker.setDraggable(false)
+        const handler = dragHandlerMapRef.current.get(stationId)
+        if (handler) {
+          marker.off('dragend', handler)
+          dragHandlerMapRef.current.delete(stationId)
+        }
+      }
+    }
+  }, [isEditingMap])
 
   function renderMarkers(map: maplibregl.Map) {
     const { stations, challenges, teams } = useGameStore.getState()
@@ -300,9 +329,19 @@ const map = new maplibregl.Map({
           }
         })
 
-        const marker = new maplibregl.Marker({ element: el })
+        const draggable = isEditingMapRef.current
+        const marker = new maplibregl.Marker({ element: el, draggable })
           .setLngLat([station.lng, station.lat])
           .addTo(map)
+
+        if (draggable) {
+          const handler = (_e: maplibregl.MapLibreEvent) => {
+            const { lat, lng } = marker.getLngLat()
+            moveStation(station.id, lat, lng).catch(() => {})
+          }
+          dragHandlerMapRef.current.set(station.id, handler)
+          marker.on('dragend', handler)
+        }
 
         markerMapRef.current.set(station.id, marker)
       }
@@ -315,6 +354,7 @@ const map = new maplibregl.Map({
       if (!currentStationIds.has(sid)) {
         marker.remove()
         markerMapRef.current.delete(sid)
+        dragHandlerMapRef.current.delete(sid)
       }
     }
 
