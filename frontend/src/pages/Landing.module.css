@@ -12,17 +12,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1.5rem;
+  padding: 4rem 1.5rem 3rem;
   min-height: 60vh;
   text-align: center;
-  background: linear-gradient(180deg, #1A6B6B 0%, #134f4f 100%);
+  background: var(--color-paper);
 }
 
 .title {
   font-family: var(--font-display);
   font-size: clamp(3rem, 12vw, 6rem);
   font-weight: 800;
-  color: var(--color-amber);
+  color: var(--color-teal);
   letter-spacing: -0.02em;
   margin-bottom: 0.5rem;
 }
@@ -30,14 +30,14 @@
 .tagline {
   font-family: var(--font-ui);
   font-size: 1.1rem;
-  color: rgba(255,255,255,0.8);
+  color: var(--color-text);
   margin-bottom: 0.5rem;
 }
 
 .subtitle {
   font-family: var(--font-ui);
   font-size: 0.9rem;
-  color: rgba(255,255,255,0.55);
+  color: var(--color-text-muted);
   margin-bottom: 2.5rem;
   letter-spacing: 0.03em;
 }
@@ -51,8 +51,8 @@
 }
 
 .ctaPrimary {
-  background: var(--color-amber);
-  color: var(--color-text);
+  background: var(--color-teal);
+  color: #fff;
   border: none;
   border-radius: 8px;
   padding: 0.875rem 1.5rem;
@@ -65,15 +65,15 @@
 
 .ctaSecondary {
   background: transparent;
-  color: #fff;
-  border: 2px solid rgba(255,255,255,0.4);
+  color: var(--color-teal);
+  border: 2px solid var(--color-teal);
   border-radius: 8px;
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 500;
-  transition: border-color 0.15s;
+  transition: background 0.15s;
 }
-.ctaSecondary:hover { border-color: rgba(255,255,255,0.8); }
+.ctaSecondary:hover { background: rgba(26,107,107,0.08); }
 
 .form {
   display: flex;
@@ -86,26 +86,26 @@
 .formTitle {
   font-family: var(--font-display);
   font-size: 1.6rem;
-  color: #fff;
+  color: var(--color-teal);
   font-weight: 600;
   margin-bottom: 0.25rem;
 }
 
 .input {
-  background: rgba(255,255,255,0.12);
-  border: 1.5px solid rgba(255,255,255,0.3);
+  background: #fff;
+  border: 1.5px solid #ccc;
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  color: #fff;
+  color: var(--color-text);
   font-size: 1rem;
   outline: none;
   transition: border-color 0.15s;
 }
-.input::placeholder { color: rgba(255,255,255,0.5); }
-.input:focus { border-color: var(--color-amber); }
+.input::placeholder { color: var(--color-text-muted); }
+.input:focus { border-color: var(--color-teal); }
 
 .error {
-  color: #ffb3a7;
+  color: var(--color-danger);
   font-size: 0.875rem;
   text-align: center;
 }
@@ -113,16 +113,18 @@
 .back {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.6);
+  color: var(--color-text-muted);
   font-size: 0.875rem;
   margin-top: 0.25rem;
   text-align: center;
 }
-.back:hover { color: #fff; }
+.back:hover { color: var(--color-text); }
+
+/* ── How to Play ──────────────────────────────────────────────────────────── */
 
 .howto {
-  padding: 3rem 1.5rem;
-  max-width: 900px;
+  padding: 3rem 1.5rem 4rem;
+  max-width: 860px;
   margin: 0 auto;
   width: 100%;
 }
@@ -131,24 +133,40 @@
   font-family: var(--font-display);
   font-size: 1.75rem;
   font-weight: 700;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   text-align: center;
+  color: var(--color-text);
 }
 
+/* Desktop: horizontal strip with connector line */
 .steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
 }
 
 .step {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 1.5rem;
-  background: #fff;
-  border-radius: 12px;
-  border: 1.5px solid rgba(0,0,0,0.06);
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  padding: 0 1.25rem;
+  position: relative;
+}
+
+/* Connector line between steps */
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 1rem; /* vertically centered on the step number circle */
+  left: calc(50% + 1rem);
+  width: calc(100% - 2rem);
+  height: 2px;
+  background: var(--color-teal);
+  opacity: 0.25;
 }
 
 .stepNum {
@@ -163,7 +181,48 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1rem;
+  margin-bottom: 0.875rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
-.step strong { font-size: 1rem; font-weight: 600; }
-.step p { font-size: 0.875rem; color: var(--color-text-muted); line-height: 1.5; }
+.step strong {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+.step p {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* Mobile: vertical strip */
+@media (max-width: 600px) {
+  .steps {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    flex-direction: row;
+    text-align: left;
+    align-items: flex-start;
+    padding: 0 0 2rem 0;
+    gap: 1rem;
+  }
+
+  /* Vertical connector line */
+  .step:not(:last-child)::after {
+    top: 2rem;
+    left: 0.9375rem; /* center of the 2rem circle */
+    width: 2px;
+    height: calc(100% - 2rem);
+  }
+
+  .step strong { margin-bottom: 0.25rem; }
+  .stepNum { margin-bottom: 0; flex-shrink: 0; }
+}
