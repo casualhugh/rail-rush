@@ -71,6 +71,7 @@ export default function Landing() {
             <button className={styles.ctaPrimary} onClick={() => setMode('login')}>
               Sign In with Email
             </button>
+            <p className={styles.note}>New email sign-ups are closed. Use Google instead. Existing email users can still sign in.</p>
           </div>
         )}
 
