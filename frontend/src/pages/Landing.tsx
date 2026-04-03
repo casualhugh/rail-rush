@@ -65,25 +65,12 @@ export default function Landing() {
             <button className={styles.ctaPrimary} onClick={() => setMode('login')}>
               Sign In with Email
             </button>
-            <button className={styles.ctaSecondary} onClick={() => setMode('signup')}>
-              Create Account
-            </button>
           </div>
         )}
 
         {mode !== 'idle' && (
           <form className={styles.form} onSubmit={handleAuth}>
-            <h2 className={styles.formTitle}>{mode === 'login' ? 'Sign In' : 'Create Account'}</h2>
-            {mode === 'signup' && (
-              <input
-                className={styles.input}
-                type="text"
-                placeholder="Your name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-              />
-            )}
+            <h2 className={styles.formTitle}>{'Sign In'}</h2>
             <input
               className={styles.input}
               type="email"
