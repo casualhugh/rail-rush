@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { pb } from '../lib/pb'
 import styles from './Landing.module.css'
@@ -6,6 +6,12 @@ import styles from './Landing.module.css'
 export default function Landing() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    if (pb.authStore.isValid) {
+      navigate(searchParams.get('redirect') || '/dashboard', { replace: true })
+    }
+  }, [])
   const [mode, setMode] = useState<'idle' | 'login' | 'signup'>('idle')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
