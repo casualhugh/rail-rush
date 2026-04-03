@@ -51,8 +51,8 @@
 }
 
 .ctaPrimary {
-  background: var(--color-teal);
-  color: #fff;
+  background: #fff;
+  color: #3c4043;
   border: none;
   border-radius: 8px;
   padding: 0.875rem 1.5rem;
@@ -64,8 +64,8 @@
 .ctaPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .ctaGoogle {
-  background: #fff;
-  color: #3c4043;
+  background: var(--color-teal);
+  color: #fff;
   border: 2px solid rgba(0,0,0,0.12);
   border-radius: 8px;
   padding: 0.875rem 1.5rem;
