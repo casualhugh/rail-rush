@@ -49,6 +49,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
   }
 
   async function doComplete() {
+    if (!window.confirm('Mark this challenge as complete? Make sure you have submitted proof before confirming.')) return
     setError('')
     setLoading(true)
     try {
@@ -60,6 +61,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
   }
 
   async function doFail() {
+    if (!window.confirm('Mark this challenge as failed? Your team will not be able to attempt it again.')) return
     setError('')
     setLoading(true)
     try {
@@ -166,7 +168,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
             )}
             {!isAttempting && !isOtherTeam && !isBlocked && (
               <div className={styles.actions}>
-                <p className={styles.actionHint}>Reveal this challenge to attempt it. You can only attempt one challenge at a time.</p>
+                <p className={styles.actionHint}>Reveal to claim this challenge for your team. You can only attempt one challenge at a time. Other teams are locked out while you attempt it. If your team fails, the reward grows for others, but you cannot retry.</p>
                 <button className={styles.completeBtn} onClick={doClaim} disabled={claiming}>
                   {claiming ? '…' : <>Reveal (+{challenge.coinReward}<Coin />)</>}
                 </button>

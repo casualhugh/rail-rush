@@ -11,7 +11,8 @@ import StationModal from '../components/StationModal'
 import ChallengeModal from '../components/ChallengeModal'
 import EventFeed from '../components/EventFeed'
 import StationEditorOverlay from '../components/StationEditorOverlay'
-import { GoChecklist } from 'react-icons/go'
+import MapLegend from '../components/MapLegend'
+import { SlBell  } from 'react-icons/sl'
 import styles from './GameMap.module.css'
 
 export default function GameMap() {
@@ -430,7 +431,7 @@ const map = new maplibregl.Map({
 
       <div className={styles.topRight}>
         <button className={styles.feedToggle} onClick={() => setShowFeed(o => !o)}>
-          {showFeed ? '✕' : <GoChecklist />}
+          {showFeed ? '✕' : <SlBell />}
         </button>
         {isHost && (
           <button
@@ -445,6 +446,11 @@ const map = new maplibregl.Map({
             {ending ? '…' : 'End Game'}
           </button>
         )}
+      </div>
+
+      {/* Map legend */}
+      <div className={styles.legendWrapper}>
+        <MapLegend />
       </div>
 
       {/* Score panel */}

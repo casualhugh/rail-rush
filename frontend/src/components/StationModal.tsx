@@ -212,7 +212,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
             <div className={styles.divider} />
 
-            <button className={styles.tollBtn} onClick={doToll} disabled={loading}>
+            <button className={styles.tollBtn} onClick={doToll} disabled={loading || myBalance >= minContest || myBalance === 0}>
               <span>
                 {isPartialToll
                   ? <>Pay Toll: {effectiveToll}<Coin /> (all you have) to {ownerTeam?.name}</>
@@ -220,6 +220,9 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
               </span>
               <span className={styles.tollNote}>Goes to {ownerTeam?.name}</span>
             </button>
+            {myBalance >= minContest && myBalance > 0 && (
+              <p className={styles.tollGateNote}>Pay a toll once you no longer have enough coins to contest.</p>
+            )}
           </div>
         )}
 

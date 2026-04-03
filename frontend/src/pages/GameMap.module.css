@@ -139,6 +139,13 @@
   to   { transform: translateX(0); }
 }
 
+.legendWrapper {
+  position: absolute;
+  bottom: 3.5rem;
+  left: 1rem;
+  z-index: 10;
+}
+
 .editMapBtn {
   background: #fff;
   color: var(--color-teal);
