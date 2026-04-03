@@ -63,6 +63,33 @@
 .ctaPrimary:hover { opacity: 0.9; }
 .ctaPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.ctaGoogle {
+  background: #fff;
+  color: #3c4043;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ctaGoogle:hover { background: #f8f8f8; border-color: rgba(0,0,0,0.2); }
+.ctaGoogle:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0,0,0,0.12);
+}
+
 .ctaSecondary {
   background: transparent;
   color: var(--color-teal);

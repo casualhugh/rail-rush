@@ -12,6 +12,21 @@ export default function Landing() {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [googleError, setGoogleError] = useState('')
+
+  async function handleGoogleAuth() {
+    setGoogleError('')
+    setGoogleLoading(true)
+    try {
+      await pb.collection('users').authWithOAuth2({ provider: 'google' })
+      navigate(searchParams.get('redirect') || '/dashboard')
+    } catch (err: unknown) {
+      setGoogleError(err instanceof Error ? err.message : 'Google sign-in failed')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault()
@@ -42,8 +57,13 @@ export default function Landing() {
 
         {mode === 'idle' && (
           <div className={styles.ctaGroup}>
+            <button className={styles.ctaGoogle} onClick={handleGoogleAuth} disabled={googleLoading}>
+              {googleLoading ? '…' : 'Continue with Google'}
+            </button>
+            {googleError && <p className={styles.error}>{googleError}</p>}
+            <div className={styles.divider}><span>or</span></div>
             <button className={styles.ctaPrimary} onClick={() => setMode('login')}>
-              Sign In to Play
+              Sign In with Email
             </button>
             <button className={styles.ctaSecondary} onClick={() => setMode('signup')}>
               Create Account
