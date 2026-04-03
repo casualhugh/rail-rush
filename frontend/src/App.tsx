@@ -9,6 +9,7 @@ import Lobby from './pages/Lobby'
 import GameMap from './pages/GameMap'
 import EndScreen from './pages/EndScreen'
 import JoinRedirect from './pages/JoinRedirect'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 function App() {
   const [authed, setAuthed] = useState(pb.authStore.isValid)
@@ -32,6 +33,7 @@ function App() {
       <Route path="/game/:gameId/lobby" element={authed ? <Lobby /> : <Navigate to="/" replace />} />
       <Route path="/game/:gameId" element={authed ? <GameMap /> : <Navigate to="/" replace />} />
       <Route path="/game/:gameId/end" element={authed ? <EndScreen /> : <Navigate to="/" replace />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to={authed ? '/dashboard' : '/'} replace />} />
