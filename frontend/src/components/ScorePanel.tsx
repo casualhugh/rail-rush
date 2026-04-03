@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PiCoinVertical, PiTrain } from 'react-icons/pi'
 import { useGameStore } from '../store/gameStore'
 import styles from './ScorePanel.module.css'
 
@@ -26,8 +27,8 @@ export default function ScorePanel() {
               <span className={styles.rank}>#{i + 1}</span>
               <div className={styles.dot} style={{ background: t.color }} />
               <span className={styles.name}>{t.name}</span>
-              <span className={styles.stations}>{t.stationCount} 🚉</span>
-              <span className={styles.coins}>{t.coinBalance} 🪙</span>
+              <span className={styles.stations}>{t.stationCount} <PiTrain style={{ verticalAlign: 'middle' }} /></span>
+              <span className={styles.coins}>{t.coinBalance} <PiCoinVertical style={{ verticalAlign: 'middle', height: "100%" }} /></span>
             </div>
           ))}
         </div>

@@ -11,6 +11,7 @@ import StationModal from '../components/StationModal'
 import ChallengeModal from '../components/ChallengeModal'
 import EventFeed from '../components/EventFeed'
 import StationEditorOverlay from '../components/StationEditorOverlay'
+import { GoChecklist } from 'react-icons/go'
 import styles from './GameMap.module.css'
 
 export default function GameMap() {
@@ -429,7 +430,7 @@ const map = new maplibregl.Map({
 
       <div className={styles.topRight}>
         <button className={styles.feedToggle} onClick={() => setShowFeed(o => !o)}>
-          {showFeed ? '✕' : '📋'}
+          {showFeed ? '✕' : <GoChecklist />}
         </button>
         {isHost && (
           <button

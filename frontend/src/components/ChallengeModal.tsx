@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import { SlQuestion } from 'react-icons/sl'
+import { PiCoinVertical } from 'react-icons/pi'
+
+const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', height: "100%" }} />
 import { api } from '../lib/pb'
 import { markChallengeImpossible, claimChallenge } from '../lib/api'
 import { useGameStore, type Challenge } from '../store/gameStore'
@@ -112,7 +116,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
             <span className={styles.diff} style={{ color: DIFF_COLOR[challenge.difficulty] }}>
               {challenge.difficulty}
             </span>
-            <span className={styles.reward}>+{challenge.coinReward}🪙</span>
+            <span className={styles.reward}>+{challenge.coinReward}<Coin /></span>
           </div>
         </div>
 
@@ -131,8 +135,8 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
         {done && (
           <div className={styles.successMsg}>
             {requireApproval
-              ? '📹 Submit your video to the group chat, then wait for host approval.'
-              : `+${challenge.coinReward}🪙 earned!`}
+              ? <><SlQuestion style={{ verticalAlign: 'middle' }} /> Submit your video to the group chat, then wait for host approval.</>
+              : <> +{challenge.coinReward}<Coin /> earned!</>}
           </div>
         )}
 
@@ -146,7 +150,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
                 </button>
                 {requireApproval && (
                   <p className={styles.approvalNote}>
-                    📹 Send your video to the group chat before submitting.
+                    <SlQuestion style={{ verticalAlign: 'middle' }} /> Send your video to the group chat before submitting.
                   </p>
                 )}
                 <button className={styles.failBtn} onClick={doFail} disabled={loading}>
@@ -164,7 +168,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
               <div className={styles.actions}>
                 <p className={styles.actionHint}>Reveal this challenge to attempt it. You can only attempt one challenge at a time.</p>
                 <button className={styles.completeBtn} onClick={doClaim} disabled={claiming}>
-                  {claiming ? '…' : `Reveal (+${challenge.coinReward}🪙)`}
+                  {claiming ? '…' : <>Reveal (+{challenge.coinReward}<Coin />)</>}
                 </button>
               </div>
             )}
@@ -186,7 +190,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
             <div className={styles.spinner} />
             <div>
               <p><strong>Waiting for host approval…</strong></p>
-              <p className={styles.pendingHint}>📹 Send your video to the group chat before submitting.</p>
+              <p className={styles.pendingHint}><SlQuestion style={{ verticalAlign: 'middle' }} /> Send your video to the group chat before submitting.</p>
             </div>
           </div>
         )}
@@ -198,7 +202,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
             {!showRejectForm ? (
               <>
                 <button className={styles.approveBtn} onClick={doApprove} disabled={loading}>
-                  ✓ Approve (+{challenge.coinReward}🪙)
+                  ✓ Approve (+{challenge.coinReward}<Coin />)
                 </button>
                 <button className={styles.rejectToggleBtn} onClick={() => setShowRejectForm(true)}>
                   ✕ Reject

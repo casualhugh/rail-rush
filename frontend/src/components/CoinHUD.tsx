@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PiCoinVertical } from 'react-icons/pi'
 import styles from './CoinHUD.module.css'
 
 interface Props {
@@ -23,7 +24,7 @@ export default function CoinHUD({ balance }: Props) {
 
   return (
     <div className={styles.hud}>
-      <span className={styles.icon}>🪙</span>
+      <PiCoinVertical className={styles.icon} />
       <span className={styles.balance}>{balance}</span>
       {delta !== null && (
         <span

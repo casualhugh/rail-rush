@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import maplibregl from 'maplibre-gl'
+import { SlLocationPin, SlExclamation } from 'react-icons/sl'
+import { PiCoinVertical } from 'react-icons/pi'
 import { api } from '../lib/pb'
 import styles from './HostSetup.module.css'
+
+const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', marginBottom: '2px', height: "100%" }} />
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -504,7 +508,7 @@ export default function HostSetup() {
               <button
                 className={drawMode === 'pin' ? styles.toolActive : styles.tool}
                 onClick={() => { setDrawMode('pin'); setPolygonPoints([]); clearPolygonMarkers(); setConnectingFrom(null) }}
-              >📍 Place Pins</button>
+              ><SlLocationPin style={{ verticalAlign: 'middle' }} /> Place Pins</button>
               <button
                 className={drawMode === 'polygon' ? styles.toolActive : styles.tool}
                 onClick={() => { setDrawMode('polygon'); setConnectingFrom(null) }}
@@ -692,7 +696,7 @@ export default function HostSetup() {
                 <span className={styles.challengeDesc}>{c.description}</span>
                 <div className={styles.challengeMeta}>
                   <span>{c.coinReward} coins · {c.difficulty}</span>
-                  {c.stationTempId && <span>📍 {stations.find(s => s.tempId === c.stationTempId)?.name}</span>}
+                  {c.stationTempId && <span><SlLocationPin style={{ verticalAlign: 'middle' }} /> {stations.find(s => s.tempId === c.stationTempId)?.name}</span>}
                 </div>
                 <button className={styles.removeBtn} onClick={() => setChallenges(arr => arr.filter((_, j) => j !== i))}>✕</button>
               </div>
@@ -706,12 +710,12 @@ export default function HostSetup() {
                 <>
                   {poolTooSmall && (
                     <p className={styles.warning}>
-                      ⚠️ Very small challenge pool ({challenges.length} challenge{challenges.length !== 1 ? 's' : ''}). Consider adding more.
+                      <SlExclamation style={{ verticalAlign: 'middle', color: 'var(--color-amber)' }} /> Very small challenge pool ({challenges.length} challenge{challenges.length !== 1 ? 's' : ''}). Consider adding more.
                     </p>
                   )}
                   {rewardTooLow && (
                     <p className={styles.warning}>
-                      ⚠️ Total challenge rewards ({totalCoinReward}🪙) are less than half the coins in play ({Math.floor(totalCoinsInPlay * 0.5)}🪙). Players may run out of coins.
+                      <SlExclamation style={{ verticalAlign: 'middle', color: 'var(--color-amber)' }} /> Total challenge rewards ({totalCoinReward}<Coin />) are less than half the coins in play ({Math.floor(totalCoinsInPlay * 0.5)}<Coin />). Players may run out of coins.
                     </p>
                   )}
                 </>

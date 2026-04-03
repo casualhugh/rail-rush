@@ -87,7 +87,7 @@ if ! id "$APP_USER" &>/dev/null; then
     --home-dir "$APP_DIR" \
     --create-home \
     --comment "Rail Rush service account" \
-    "$APP_USER"
+    "railrush"
   echo "      User '$APP_USER' created."
 else
   echo "      User '$APP_USER' already exists, skipping."

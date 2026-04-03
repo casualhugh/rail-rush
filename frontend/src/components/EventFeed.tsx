@@ -1,6 +1,13 @@
 import { useRef, useEffect } from 'react'
+import { SlTarget, SlCheck, SlClose, SlBan, SlUser, SlRocket, SlFlag } from 'react-icons/sl'
+import { PiCoinVertical, PiTrain } from 'react-icons/pi'
+import { LuSwords } from 'react-icons/lu'
+import { CiBag1 } from 'react-icons/ci'
+import { FiSend } from 'react-icons/fi'
 import { useGameStore, type EventFeedItem } from '../store/gameStore'
 import styles from './EventFeed.module.css'
+
+const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', marginBottom: '2px', height: "100%" }} />
 
 interface Props {
   onClose: () => void
@@ -38,82 +45,82 @@ export default function EventFeed({ onClose }: Props) {
     switch (ev.type) {
       case 'claim':
         return {
-          icon: '🚉',
-          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> claimed <strong>{stationName(s)}</strong> for {coins}🪙</>,
+          icon: <PiTrain />,
+          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> claimed <strong>{stationName(s)}</strong> for {coins}<Coin /></>,
           className: styles.evClaim,
         }
       case 'reinforce':
         return {
-          icon: '🪙',
-          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> reinforced <strong>{stationName(s)}</strong> (+{coins}🪙)</>,
+          icon: <PiCoinVertical />,
+          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> reinforced <strong>{stationName(s)}</strong> (+{coins}<Coin />)</>,
           className: styles.evClaim,
         }
       case 'contest':
         return {
-          icon: '⚔️',
-          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> took <strong>{stationName(s)}</strong> from <span style={{ color: teamColor(t2), fontWeight: 600 }}>{teamName(t2)}</span> for {coins}🪙</>,
+          icon: <LuSwords />,
+          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> took <strong>{stationName(s)}</strong> from <span style={{ color: teamColor(t2), fontWeight: 600 }}>{teamName(t2)}</span> for {coins}<Coin /></>,
           className: styles.evContest,
         }
       case 'toll_paid':
         return {
-          icon: '🚃',
+          icon: <CiBag1 />,
           text: ev.wasPartial
-            ? <em style={{ color: 'var(--color-text-muted)' }}><span style={{ color: teamColor(t) }}>{teamName(t)}</span> paid partial toll ({coins}🪙) to {teamName(t2)} at {stationName(s)}</em>
-            : <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> paid toll ({coins}🪙) to <span style={{ color: teamColor(t2) }}>{teamName(t2)}</span> at <strong>{stationName(s)}</strong></>,
+            ? <em style={{ color: 'var(--color-text-muted)' }}><span style={{ color: teamColor(t) }}>{teamName(t)}</span> paid partial toll ({coins}<Coin />) to {teamName(t2)} at {stationName(s)}</em>
+            : <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> paid toll ({coins}<Coin />) to <span style={{ color: teamColor(t2) }}>{teamName(t2)}</span> at <strong>{stationName(s)}</strong></>,
           className: ev.wasPartial ? styles.evTollPartial : styles.evToll,
         }
       case 'challenge_drawn':
         return {
-          icon: '🎯',
+          icon: <SlTarget />,
           text: <>Challenge drawn at <strong>{stationName(s) || '(no station)'}</strong></>,
           className: styles.evChallenge,
         }
       case 'challenge_submitted':
         return {
-          icon: '📤',
+          icon: <FiSend />,
           text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> submitted challenge at <strong>{stationName(s)}</strong></>,
           className: styles.evChallenge,
         }
       case 'challenge_completed':
         return {
-          icon: '✅',
-          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> completed challenge at <strong>{stationName(s)}</strong>{coins ? ` +${coins}🪙` : ''}</>,
+          icon: <SlCheck style={{ color: '#27AE60' }} />,
+          text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> completed challenge at <strong>{stationName(s)}</strong>{coins ? <> +{coins}<Coin /></> : null}</>,
           className: styles.evApproved,
         }
       case 'challenge_failed':
         return {
-          icon: '❌',
+          icon: <SlClose style={{ color: '#C0392B' }} />,
           text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> failed challenge at <strong>{stationName(s)}</strong></>,
           className: styles.evFailed,
         }
       case 'challenge_rejected':
         return {
-          icon: '🚫',
+          icon: <SlBan />,
           text: <>Challenge rejected for <span style={{ color: teamColor(t) }}>{teamName(t)}</span></>,
           className: styles.evFailed,
         }
       case 'challenge_impossible':
         return {
-          icon: '🚫',
+          icon: <SlBan />,
           text: <>Host removed challenge at <strong>{stationName(s) || '(no station)'}</strong> as impossible</>,
           className: styles.evFailed,
         }
       case 'challenge_claimed':
         return {
-          icon: '🎯',
+          icon: <SlTarget />,
           text: <><span style={{ color: teamColor(t), fontWeight: 600 }}>{teamName(t)}</span> is attempting challenge at <strong>{stationName(s)}</strong></>,
           className: styles.evChallenge,
         }
       case 'player_joined':
         return {
-          icon: '👋',
+          icon: <SlUser />,
           text: <>Player joined <span style={{ color: teamColor(t) }}>{teamName(t)}</span></>,
           className: styles.evSystem,
         }
       case 'game_started':
-        return { icon: '🚀', text: <>Game started!</>, className: styles.evSystem }
+        return { icon: <SlRocket />, text: <>Game started!</>, className: styles.evSystem }
       case 'game_ended':
-        return { icon: '🏁', text: <>Game ended</>, className: styles.evSystem }
+        return { icon: <SlFlag />, text: <>Game ended</>, className: styles.evSystem }
       default:
         return { icon: '•', text: <>{ev.type}</>, className: styles.evSystem }
     }

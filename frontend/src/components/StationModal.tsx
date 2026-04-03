@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { PiCoinVertical, PiTrain } from 'react-icons/pi'
 import { useGameStore, type Station, type Challenge } from '../store/gameStore'
 import { reinforceStation, stakeStation, payToll } from '../lib/api'
 import styles from './StationModal.module.css'
+
+const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', marginBottom: '2px', height: "100%" }} />
 
 interface Props {
   station: Station
@@ -88,10 +91,10 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
         {/* Station name + owner */}
         <div className={styles.stationHeader}>
-          <h2 className={styles.stationName}>{station.name}</h2>
+          <h2 className={styles.stationName}><PiTrain style={{ verticalAlign: 'middle' }} /> {station.name}</h2>
           {ownerTeam && (
             <div className={styles.ownerTag} style={{ background: ownerTeam.color }}>
-              {ownerTeam.name} · {currentStake}🪙 staked
+              {ownerTeam.name} · {currentStake}<Coin /> staked
             </div>
           )}
         </div>
@@ -99,7 +102,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
         {/* Connected stations */}
         {connectedStations.length > 0 && (
           <div className={styles.connections}>
-            <span className={styles.connectionsLabel}>Connects to</span>
+            <span className={styles.connectionsLabel}><PiTrain style={{ verticalAlign: 'middle' }} /> Connects to</span>
             <div className={styles.connectionsList}>
               {connectedStations.map(s => (
                 <span key={s.id} className={styles.connectionChip}>{s.name}</span>
@@ -117,7 +120,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
             <span className={styles.challengeTriangle}>▽</span>
             <span className={styles.challengeBannerText}>
               <strong>{activeChallenge.description.slice(0, 60)}{activeChallenge.description.length > 60 ? '…' : ''}</strong>
-              <span className={styles.challengeReward}>+{activeChallenge.coinReward}🪙</span>
+              <span className={styles.challengeReward}>+{activeChallenge.coinReward}<Coin /></span>
             </span>
             <span className={styles.challengeArrow}>→</span>
           </button>
@@ -129,14 +132,14 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
         {isOwn && (
           <>
             <div className={styles.ownMsg}>
-              <span>✓</span> You own this station · {currentStake}🪙 staked · ceiling {stakeCeiling}🪙
+              <span>✓</span> You own this station · {currentStake}<Coin /> staked · ceiling {stakeCeiling}<Coin />
             </div>
 
             {currentStake < stakeCeiling && (() => {
               const ceilingRemaining = stakeCeiling - currentStake
               return (
               <div className={styles.actions}>
-                <p className={styles.actionLabel}>{currentStake}🪙 staked · ceiling {stakeCeiling}🪙</p>
+                <p className={styles.actionLabel}>{currentStake}<Coin /> staked · ceiling {stakeCeiling}<Coin /></p>
                 <p className={styles.actionLabel}>Reinforce</p>
                 <div className={styles.sliderRow}>
                   <input
@@ -147,7 +150,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                     onChange={e => setReinforceCoins(+e.target.value)}
                     className={styles.slider}
                   />
-                  <span className={styles.sliderVal}>{reinforceCoins}🪙</span>
+                  <span className={styles.sliderVal}>{reinforceCoins}<Coin /></span>
                 </div>
                 <p className={styles.coinNote}>Stake locked in</p>
                 <button
@@ -162,7 +165,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
             })()}
 
             {currentStake === stakeCeiling && (
-              <p className={styles.reinforcedMsg}>Fully reinforced ({currentStake}🪙 staked)</p>
+              <p className={styles.reinforcedMsg}>Fully reinforced ({currentStake}<Coin /> staked)</p>
             )}
           </>
         )}
@@ -175,9 +178,9 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
               {/* max uses maxStakeIncrement prop — previously hard-coded to 5 */}
               <input type="range" min={1} max={Math.min(maxStakeIncrement, myBalance)} value={claimCoins}
                 onChange={e => setClaimCoins(+e.target.value)} className={styles.slider} />
-              <span className={styles.sliderVal}>{claimCoins}🪙</span>
+              <span className={styles.sliderVal}>{claimCoins}<Coin /></span>
             </div>
-            <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
+            <p className={styles.coinNote}>Stake locked in · balance: {myBalance}<Coin /></p>
             <button className={styles.primaryBtn} onClick={() => doStake(claimCoins)} disabled={loading || myBalance < 1}>
               {loading ? '…' : `Claim: ${claimCoins} coin${claimCoins !== 1 ? 's' : ''}`}
             </button>
@@ -196,23 +199,25 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                     value={Math.min(contestStake, Math.max(contestMin, contestMax))}
                     onChange={e => setContestStake(+e.target.value)}
                     className={styles.slider} />
-                  <span className={styles.sliderVal}>{Math.min(contestStake, Math.max(contestMin, contestMax))}🪙</span>
+                  <span className={styles.sliderVal}>{Math.min(contestStake, Math.max(contestMin, contestMax))}<Coin /></span>
                 </div>
-                <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
+                <p className={styles.coinNote}>Stake locked in · balance: {myBalance}<Coin /></p>
                 <button className={styles.primaryBtn} onClick={() => doStake(Math.min(contestStake, Math.max(contestMin, contestMax)))} disabled={loading}>
                   {loading ? '…' : `Contest: ${Math.min(contestStake, Math.max(contestMin, contestMax))} coins`}
                 </button>
               </>
             ) : (
-              <p className={styles.cantAfford}>Need at least {minContest}🪙 to contest (you have {myBalance}🪙)</p>
+              <p className={styles.cantAfford}>Need at least {minContest}<Coin /> to contest (you have {myBalance}<Coin />)</p>
             )}
 
             <div className={styles.divider} />
 
             <button className={styles.tollBtn} onClick={doToll} disabled={loading}>
-              {isPartialToll
-                ? `Pay Toll: ${effectiveToll}🪙 (all you have) to ${ownerTeam?.name}`
-                : `Pay Toll: ${tollCost}🪙 to ${ownerTeam?.name}`}
+              <span>
+                {isPartialToll
+                  ? <>Pay Toll: {effectiveToll}<Coin /> (all you have) to {ownerTeam?.name}</>
+                  : <>Pay Toll: {tollCost}<Coin /> to {ownerTeam?.name}</>}
+              </span>
               <span className={styles.tollNote}>Goes to {ownerTeam?.name}</span>
             </button>
           </div>

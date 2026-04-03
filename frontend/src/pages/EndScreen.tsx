@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PiCoinVertical, PiTrain } from 'react-icons/pi'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pb'
 import { getGame } from '../lib/api'
@@ -108,9 +109,9 @@ export default function EndScreen() {
               <div className={styles.teamInfo}>
                 <span className={styles.teamName}>{s.teamName}</span>
                 <span className={styles.teamStats}>
-                  {s.stationCount} station{s.stationCount !== 1 ? 's' : ''}
+                  <PiTrain style={{ verticalAlign: 'middle' }} /> {s.stationCount} station{s.stationCount !== 1 ? 's' : ''}
                   {s.totalStaked > 0 ? ` · ${s.totalStaked} staked` : ''}
-                  {' · '}{s.coinBalance}🪙 remaining
+                  {' · '}{s.coinBalance}<PiCoinVertical style={{ verticalAlign: 'middle', marginBottom: '2px', height: "100%" }} /> remaining
                 </span>
               </div>
             </div>
