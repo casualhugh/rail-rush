@@ -155,14 +155,14 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                   onClick={doReinforce}
                   disabled={loading || myBalance < 1}
                 >
-                  {loading ? '…' : `Reinforce — ${reinforceCoins} coin${reinforceCoins !== 1 ? 's' : ''}`}
+                  {loading ? '…' : `Reinforce: ${reinforceCoins} coin${reinforceCoins !== 1 ? 's' : ''}`}
                 </button>
               </div>
               )
             })()}
 
             {currentStake === stakeCeiling && (
-              <p className={styles.reinforcedMsg}>Fully reinforced — {currentStake}🪙 staked</p>
+              <p className={styles.reinforcedMsg}>Fully reinforced ({currentStake}🪙 staked)</p>
             )}
           </>
         )}
@@ -179,7 +179,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
             </div>
             <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
             <button className={styles.primaryBtn} onClick={() => doStake(claimCoins)} disabled={loading || myBalance < 1}>
-              {loading ? '…' : `Claim — ${claimCoins} coin${claimCoins !== 1 ? 's' : ''}`}
+              {loading ? '…' : `Claim: ${claimCoins} coin${claimCoins !== 1 ? 's' : ''}`}
             </button>
           </div>
         )}
@@ -200,7 +200,7 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
                 </div>
                 <p className={styles.coinNote}>Stake locked in · balance: {myBalance}🪙</p>
                 <button className={styles.primaryBtn} onClick={() => doStake(Math.min(contestStake, Math.max(contestMin, contestMax)))} disabled={loading}>
-                  {loading ? '…' : `Contest — ${Math.min(contestStake, Math.max(contestMin, contestMax))} coins`}
+                  {loading ? '…' : `Contest: ${Math.min(contestStake, Math.max(contestMin, contestMax))} coins`}
                 </button>
               </>
             ) : (
@@ -211,8 +211,8 @@ export default function StationModal({ station, myTeamId, tollCost, maxStakeIncr
 
             <button className={styles.tollBtn} onClick={doToll} disabled={loading}>
               {isPartialToll
-                ? `Pay Toll — ${effectiveToll}🪙 (all you have) → ${ownerTeam?.name}`
-                : `Pay Toll — ${tollCost}🪙 → ${ownerTeam?.name}`}
+                ? `Pay Toll: ${effectiveToll}🪙 (all you have) to ${ownerTeam?.name}`
+                : `Pay Toll: ${tollCost}🪙 to ${ownerTeam?.name}`}
               <span className={styles.tollNote}>Goes to {ownerTeam?.name}</span>
             </button>
           </div>

@@ -156,7 +156,7 @@ export default function Dashboard() {
             className={styles.createBtn}
             onClick={() => navigate('/game/new')}
             disabled={atGameLimit}
-            title={atGameLimit ? 'You have 5 active games — end or delete one first' : undefined}
+            title={atGameLimit ? 'You have 5 active games. End or delete one first.' : undefined}
           >
             + Create Game
           </button>
@@ -168,7 +168,7 @@ export default function Dashboard() {
           {loading ? (
             <p className={styles.muted}>Loading…</p>
           ) : games.length === 0 ? (
-            <p className={styles.muted}>No games yet — create one or join with a code.</p>
+            <p className={styles.muted}>No games yet. Create one or join with a code.</p>
           ) : (
             <div className={styles.gameList}>
               {games.map(g => (

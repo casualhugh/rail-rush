@@ -633,7 +633,7 @@ export default function HostSetup() {
         {step === 4 && (
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Challenges</h2>
-            <p className={styles.hint}>Optional — challenges earn coins when completed.</p>
+            <p className={styles.hint}>Optional. Challenges earn coins when completed.</p>
             <div className={styles.challengeForm}>
               <textarea className={styles.textarea} placeholder="Challenge description…"
                 value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2} />
@@ -657,7 +657,7 @@ export default function HostSetup() {
                   <div className={styles.stationSearchWrapper}>
                     <input
                       className={styles.inputSm}
-                      placeholder="— random —"
+                      placeholder="random"
                       value={stationSearch}
                       onChange={e => { setStationSearch(e.target.value); setStationDropdownOpen(true) }}
                       onFocus={() => setStationDropdownOpen(true)}
@@ -667,7 +667,7 @@ export default function HostSetup() {
                       <div className={styles.stationDropdown}>
                         <div className={styles.stationDropdownItem}
                           onMouseDown={() => { setNewPinnedStation(''); setStationSearch(''); setStationDropdownOpen(false) }}>
-                          — random —
+                          random
                         </div>
                         {stations
                           .filter(s => s.name.toLowerCase().includes(stationSearch.toLowerCase()))

@@ -103,7 +103,7 @@ export default function Landing() {
           <div className={styles.step}>
             <span className={styles.stepNum}>2</span>
             <strong>Claim territory</strong>
-            <p>Place coins to claim stations. Contest enemy stations by outbidding them — or pay a toll to pass through.</p>
+            <p>Place coins to claim stations. Contest enemy stations by outbidding them, or pay a toll to pass through.</p>
           </div>
           <div className={styles.step}>
             <span className={styles.stepNum}>3</span>

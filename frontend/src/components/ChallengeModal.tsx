@@ -164,7 +164,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
               <div className={styles.actions}>
                 <p className={styles.actionHint}>Reveal this challenge to attempt it. You can only attempt one challenge at a time.</p>
                 <button className={styles.completeBtn} onClick={doClaim} disabled={claiming}>
-                  {claiming ? '…' : `Reveal — +${challenge.coinReward}🪙`}
+                  {claiming ? '…' : `Reveal (+${challenge.coinReward}🪙)`}
                 </button>
               </div>
             )}
@@ -194,7 +194,7 @@ export default function ChallengeModal({ challenge, myTeamId, isHost, onClose }:
         {/* Host: approve/reject pending */}
         {isPending && isHost && (
           <div className={styles.hostActions}>
-            <p className={styles.pendingHint}>Team submitted — review their video then:</p>
+            <p className={styles.pendingHint}>Team submitted. Review their video, then:</p>
             {!showRejectForm ? (
               <>
                 <button className={styles.approveBtn} onClick={doApprove} disabled={loading}>
