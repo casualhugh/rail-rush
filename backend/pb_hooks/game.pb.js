@@ -7,9 +7,6 @@
 routerAdd("POST", "/api/rr/game", (e) => {
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
-  if (!authRecord.get("verified")) {
-    throw new ForbiddenError("email verification required to host a game");
-  }
 
   const activeCount = e.app.findRecordsByFilter(
     "games",

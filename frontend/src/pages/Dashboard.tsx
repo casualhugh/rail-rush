@@ -21,12 +21,6 @@ export default function Dashboard() {
   const [joinError, setJoinError] = useState('')
   const [loading, setLoading] = useState(true)
   const [atGameLimit, setAtGameLimit] = useState(false)
-  const [verified, setVerified] = useState<boolean>(pb.authStore.model?.['verified'] ?? true)
-  const [verifyEmailSent, setVerifyEmailSent] = useState(false)
-  const [verifyLoading, setVerifyLoading] = useState(false)
-  const [verifyError, setVerifyError] = useState('')
-  const [refreshLoading, setRefreshLoading] = useState(false)
-  const [refreshMessage, setRefreshMessage] = useState('')
 
   useEffect(() => {
     loadGames()
@@ -129,37 +123,6 @@ export default function Dashboard() {
     navigate('/')
   }
 
-  async function handleSendVerification() {
-    setVerifyError('')
-    setVerifyLoading(true)
-    try {
-      await pb.collection('users').requestVerification(pb.authStore.model?.['email'] ?? '')
-      setVerifyEmailSent(true)
-    } catch {
-      setVerifyError('Failed to send — please try again')
-    } finally {
-      setVerifyLoading(false)
-    }
-  }
-
-  async function handleRefreshVerified() {
-    setRefreshMessage('')
-    setRefreshLoading(true)
-    try {
-      await pb.collection('users').authRefresh()
-      const nowVerified = pb.authStore.model?.['verified'] ?? false
-      if (nowVerified) {
-        setVerified(true)
-      } else {
-        setRefreshMessage('Email not yet verified — please check your inbox.')
-      }
-    } catch {
-      setRefreshMessage('Could not refresh status — please try again.')
-    } finally {
-      setRefreshLoading(false)
-    }
-  }
-
   const statusLabel = (s: string) => s === 'lobby' ? 'In Lobby' : s === 'active' ? 'Live' : 'Ended'
   const statusColor = (s: string) => s === 'active' ? 'var(--color-teal)' : s === 'lobby' ? 'var(--color-amber)' : 'var(--color-text-muted)'
 
@@ -192,50 +155,12 @@ export default function Dashboard() {
           <button
             className={styles.createBtn}
             onClick={() => navigate('/game/new')}
-            disabled={atGameLimit || !verified}
-            title={
-              !verified
-                ? 'Verify your email to host a game'
-                : atGameLimit
-                ? 'You have 5 active games. End or delete one first.'
-                : undefined
-            }
+            disabled={atGameLimit}
+            title={atGameLimit ? 'You have 5 active games. End or delete one first.' : undefined}
           >
             + Create Game
           </button>
         </div>
-
-        {!verified && (
-          <div className={styles.verifyBanner}>
-            <p className={styles.verifyMsg}>
-              Please verify your email before hosting a game.
-            </p>
-            {!verifyEmailSent ? (
-              <>
-                <button
-                  className={styles.verifyBtn}
-                  onClick={handleSendVerification}
-                  disabled={verifyLoading}
-                >
-                  {verifyLoading ? '…' : 'Send verification email'}
-                </button>
-                {verifyError && <p className={styles.error}>{verifyError}</p>}
-              </>
-            ) : (
-              <>
-                <p className={styles.verifyMsg}>Verification email sent — check your inbox.</p>
-                <button
-                  className={styles.verifySecondaryBtn}
-                  onClick={handleRefreshVerified}
-                  disabled={refreshLoading}
-                >
-                  {refreshLoading ? '…' : "I've verified my email"}
-                </button>
-                {refreshMessage && <p className={styles.verifyMsg}>{refreshMessage}</p>}
-              </>
-            )}
-          </div>
-        )}
 
         {/* Games list */}
         <section className={styles.section}>
