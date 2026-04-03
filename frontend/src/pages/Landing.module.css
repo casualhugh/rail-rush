@@ -226,3 +226,18 @@
   .step strong { margin-bottom: 0.25rem; }
   .stepNum { margin-bottom: 0; flex-shrink: 0; }
 }
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.footer a {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+}
+.footer a:hover { color: var(--color-text); }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { pb } from '../lib/pb'
 import styles from './Landing.module.css'
 
@@ -112,6 +112,10 @@ export default function Landing() {
           </div>
         </div>
       </div>
+
+      <footer className={styles.footer}>
+        <Link to="/privacy">Privacy Policy</Link>
+      </footer>
     </div>
   )
 }
