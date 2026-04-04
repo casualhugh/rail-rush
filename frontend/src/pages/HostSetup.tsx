@@ -806,7 +806,7 @@ export default function HostSetup() {
 
         {step === 1 && (
           <div className={styles.stepPanel}>
-            <h2 className={styles.stepTitle}>Choose a Map</h2>
+            <h2 className={styles.stepTitle}>Choose a Community Made Map</h2>
             <MapGallery
               onSelect={template => {
                 setSelectedTemplate(template)

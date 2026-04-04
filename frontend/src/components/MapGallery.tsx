@@ -73,12 +73,12 @@ export default function MapGallery({ onSelect, onSkip }: Props) {
   return (
     <div className={styles.root}>
       <button className={styles.skipBtn} onClick={onSkip}>
-        Start fresh
+        Create my own
       </button>
       <input
         className={styles.search}
         type="text"
-        placeholder="Search maps by name or city..."
+        placeholder="Search maps..."
         value={query}
         onChange={e => handleSearch(e.target.value)}
       />
@@ -103,7 +103,7 @@ export default function MapGallery({ onSelect, onSkip }: Props) {
         ))}
       </div>
       {results.length === 0 && !loading && (
-        <p className={styles.empty}>No maps found. Be the first to save one!</p>
+        <p className={styles.empty}>No maps found. Be the first to create one by starting fresh!</p>
       )}
       {hasMore && (
         <button className={styles.loadMore} onClick={handleLoadMore} disabled={loading}>
