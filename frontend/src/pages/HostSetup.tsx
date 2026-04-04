@@ -108,6 +108,10 @@ export default function HostSetup() {
   useEffect(() => { connectionsRef.current = connections }, [connections])
   useEffect(() => { connectingFromRef.current = connectingFrom }, [connectingFrom])
   useEffect(() => { selectedTemplateRef.current = selectedTemplate }, [selectedTemplate])
+  useEffect(() => {
+    if (!mapRef.current || !mapRef.current.loaded()) return
+    if (selectedTemplate) applyTemplate(mapRef.current)
+  }, [selectedTemplate])
 
   // Init map when step 2 is active
   useEffect(() => {
@@ -142,31 +146,15 @@ export default function HostSetup() {
       map.addLayer({ id: 'conn-fg', type: 'line', source: 'station-connections',
         paint: { 'line-color': '#ffffff', 'line-width': 3 } })
 
-      // Re-add markers and connections when returning to step 2
-      for (const pin of stationsRef.current) {
-        const el = document.createElement('div')
-        el.className = styles.mapPin
-        const dot = document.createElement('div')
-        dot.className = styles.mapPinDot
-        el.appendChild(dot)
-        const marker = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([pin.lng, pin.lat]).addTo(map)
-        el.addEventListener('click', (ev) => {
-          ev.stopPropagation()
-          if (drawModeRef.current === 'connect') { handleConnectClick(pin.tempId); return }
-          const current = stationsRef.current.find(s => s.tempId === pin.tempId)
-          if (current) { setEditingStation(current); setEditName(current.name) }
-        })
-        marker.on('dragend', () => {
-          const { lat, lng } = marker.getLngLat()
-          setStations(prev => {
-            const updated = prev.map(s => s.tempId === pin.tempId ? { ...s, lat, lng } : s)
-            updateConnectionLayer(connectionsRef.current, updated)
-            return updated
-          })
-        })
-        markersRef.current.set(pin.tempId, marker)
+      // Apply template or re-add existing markers
+      if (selectedTemplateRef.current) {
+        applyTemplate(map)
+      } else {
+        for (const pin of stationsRef.current) {
+          addStationMarker(map, pin)
+        }
+        updateConnectionLayer(connectionsRef.current, stationsRef.current)
       }
-      updateConnectionLayer(connectionsRef.current, stationsRef.current)
     })
 
     map.on('click', (e) => {
@@ -235,6 +223,48 @@ export default function HostSetup() {
       mapRef.current = null
     }
   }, [step])
+
+  function addStationMarker(map: maplibregl.Map, pin: StationPin) {
+    const el = document.createElement('div')
+    el.className = styles.mapPin
+    const dot = document.createElement('div')
+    dot.className = styles.mapPinDot
+    el.appendChild(dot)
+    const marker = new maplibregl.Marker({ element: el, draggable: true })
+      .setLngLat([pin.lng, pin.lat])
+      .addTo(map)
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation()
+      if (drawModeRef.current === 'connect') { handleConnectClick(pin.tempId); return }
+      const current = stationsRef.current.find(s => s.tempId === pin.tempId)
+      if (current) { setEditingStation(current); setEditName(current.name) }
+    })
+    marker.on('dragend', () => {
+      const { lat, lng } = marker.getLngLat()
+      setStations(prev => {
+        const updated = prev.map(s => s.tempId === pin.tempId ? { ...s, lat, lng } : s)
+        updateConnectionLayer(connectionsRef.current, updated)
+        return updated
+      })
+    })
+    markersRef.current.set(pin.tempId, marker)
+  }
+
+  function applyTemplate(map: maplibregl.Map) {
+    const tmpl = selectedTemplateRef.current
+    if (!tmpl) return
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current.clear()
+    setStations(tmpl.stations as StationPin[])
+    setConnections(tmpl.connections)
+    stationsRef.current = tmpl.stations as StationPin[]
+    connectionsRef.current = tmpl.connections
+    for (const pin of tmpl.stations as StationPin[]) {
+      addStationMarker(map, pin)
+    }
+    updateConnectionLayer(tmpl.connections, tmpl.stations as StationPin[])
+    map.fitBounds(tmpl.mapBounds, { padding: 40 })
+  }
 
   function handleSearchChange(q: string) {
     setSearchQuery(q)
