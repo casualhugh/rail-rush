@@ -132,3 +132,50 @@ export const claimChallenge = (challengeId: string, teamId: string) =>
 
 export const updateLocation = (teamId: string, lat: number, lng: number) =>
   api.patch<{ ok: boolean }>(`/api/rr/team/${teamId}/location`, { lat, lng })
+
+// ── Map templates ─────────────────────────────────────────────────────────────
+
+export interface MapTemplateSummary {
+  id: string
+  name: string
+  cityName: string | null
+  stationCount: number
+  timesUsed: number
+}
+
+export interface MapTemplateDetail {
+  id: string
+  name: string
+  cityName: string | null
+  mapBounds: [[number, number], [number, number]]
+  stations: StationPin[]
+  connections: [string, string][]
+  stationCount: number
+  timesUsed: number
+}
+
+// StationPin re-declared here to avoid circular dep with HostSetup.tsx
+export interface StationPin {
+  name: string
+  lat: number
+  lng: number
+  tempId: string
+  osmNodeId?: number
+}
+
+export const listMaps = (search: string, limit: number, offset: number) => {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  if (search) params.set('search', search)
+  return api.get<MapTemplateSummary[]>(`/api/rr/maps?${params}`)
+}
+
+export const getMap = (id: string) =>
+  api.get<MapTemplateDetail>(`/api/rr/maps/${id}`)
+
+export const saveMap = (body: {
+  name: string
+  cityName?: string
+  mapBounds: [[number, number], [number, number]]
+  stations: StationPin[]
+  connections: [string, string][]
+}) => api.post<{ id: string }>('/api/rr/maps', body)
