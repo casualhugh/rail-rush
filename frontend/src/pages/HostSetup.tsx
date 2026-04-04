@@ -5,6 +5,8 @@ import { SlLocationPin, SlExclamation } from 'react-icons/sl'
 import { PiCoinVertical } from 'react-icons/pi'
 import { api } from '../lib/pb'
 import styles from './HostSetup.module.css'
+import { saveMap, MapTemplateDetail } from '../lib/api'
+import MapGallery from '../components/MapGallery'
 
 const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', marginBottom: '2px', height: "100%" }} />
 
@@ -30,7 +32,7 @@ const PRESET_COLORS = [
 ]
 
 type DrawMode = 'pin' | 'polygon' | 'connect'
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2 | 3 | 4 | 5 | 6
 
 export default function HostSetup() {
   const navigate = useNavigate()
@@ -91,16 +93,25 @@ export default function HostSetup() {
     { name: 'Team Orange', color: PRESET_COLORS[1] },
   ])
 
+  // Template gallery
+  const [selectedTemplate, setSelectedTemplate] = useState<MapTemplateDetail | null>(null)
+  const selectedTemplateRef = useRef<MapTemplateDetail | null>(null)
+
+  // Step 6 — save as template
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+
   // Keep refs in sync for use inside map click closures
   useEffect(() => { stationsRef.current = stations }, [stations])
   useEffect(() => { drawModeRef.current = drawMode }, [drawMode])
   useEffect(() => { polygonPointsRef.current = polygonPoints }, [polygonPoints])
   useEffect(() => { connectionsRef.current = connections }, [connections])
   useEffect(() => { connectingFromRef.current = connectingFrom }, [connectingFrom])
+  useEffect(() => { selectedTemplateRef.current = selectedTemplate }, [selectedTemplate])
 
   // Init map when step 2 is active
   useEffect(() => {
-    if (step !== 2 || !mapContainerRef.current || mapRef.current) return
+    if (step !== 3 || !mapContainerRef.current || mapRef.current) return
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -727,30 +738,35 @@ export default function HostSetup() {
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() =>
-          step > 1 && step < 6 ? setStep(s => (s - 1) as Step) : navigate('/dashboard')
-        }>
-          ← {step > 1 && step < 6 ? 'Back' : 'Dashboard'}
+        <button className={styles.backBtn} onClick={() => {
+          if (step > 1 && step < 7) {
+            if (step === 2) setSelectedTemplate(null)
+            setStep(s => (s - 1) as Step)
+          } else {
+            navigate('/dashboard')
+          }
+        }}>
+          ← {step > 1 && step < 7 ? 'Back' : 'Dashboard'}
         </button>
         <h1 className={styles.title}>Create Game</h1>
-        {step < 6 && <span className={styles.stepIndicator}>{step} / 5</span>}
+        {step < 6 && <span className={styles.stepIndicator}>{step} / 6</span>}
       </header>
 
       <div className={styles.content}>
 
-        {step === 1 && (
+        {step === 2 && (
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Game Details</h2>
             <label className={styles.label}>Game name</label>
             <input className={styles.input} value={gameName} onChange={e => setGameName(e.target.value)}
               placeholder="e.g. London Rail Rush" maxLength={60} />
-            <button className={styles.nextBtn} onClick={() => setStep(2)} disabled={!gameName.trim()}>
+            <button className={styles.nextBtn} onClick={() => setStep(3)} disabled={!gameName.trim()}>
               Next: Place Stations →
             </button>
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className={styles.mapStep}>
             <div className={styles.mapInstructions}>
               <p>Tap the map to place stations. Tap a pin to rename or remove it.</p>
@@ -892,14 +908,14 @@ export default function HostSetup() {
               })}
             </div>
             <div className={styles.mapFooter}>
-              <button className={styles.nextBtn} onClick={() => setStep(3)} disabled={stations.length < 2}>
+              <button className={styles.nextBtn} onClick={() => setStep(4)} disabled={stations.length < 2}>
                 Next: Rules →
               </button>
             </div>
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Rules</h2>
             <label className={styles.label}>Starting coins per team</label>
@@ -915,11 +931,11 @@ export default function HostSetup() {
               <input type="checkbox" checked={requireApproval} onChange={e => setRequireApproval(e.target.checked)} />
               Require host approval for challenge completions
             </label>
-            <button className={styles.nextBtn} onClick={() => setStep(4)}>Next: Challenges →</button>
+            <button className={styles.nextBtn} onClick={() => setStep(5)}>Next: Challenges →</button>
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Challenges</h2>
             <p className={styles.hint}>Optional. Challenges earn coins when completed.</p>
@@ -1006,11 +1022,11 @@ export default function HostSetup() {
                 </>
               )
             })()}
-            <button className={styles.nextBtn} onClick={() => setStep(5)}>Next: Teams →</button>
+            <button className={styles.nextBtn} onClick={() => setStep(6)}>Next: Teams →</button>
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Teams</h2>
             {teams.map((t, i) => (
