@@ -135,6 +135,16 @@ export const updateLocation = (teamId: string, lat: number, lng: number) =>
 
 // ── Map templates ─────────────────────────────────────────────────────────────
 
+// StationPin shared type — local to HostSetup.tsx but re-declared here so
+// MapTemplateDetail and MapGallery can reference it without a circular import.
+export interface StationPin {
+  name: string
+  lat: number
+  lng: number
+  tempId: string
+  osmNodeId?: number
+}
+
 export interface MapTemplateSummary {
   id: string
   name: string
@@ -152,15 +162,6 @@ export interface MapTemplateDetail {
   connections: [string, string][]
   stationCount: number
   timesUsed: number
-}
-
-// StationPin re-declared here to avoid circular dep with HostSetup.tsx
-export interface StationPin {
-  name: string
-  lat: number
-  lng: number
-  tempId: string
-  osmNodeId?: number
 }
 
 export const listMaps = (search: string, limit: number, offset: number) => {
