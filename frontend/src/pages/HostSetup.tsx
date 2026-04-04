@@ -57,6 +57,9 @@ export default function HostSetup() {
   const [connections, setConnections] = useState<[string, string][]>([])
   const connectionsRef = useRef<[string, string][]>([])
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
+  const [importError, setImportError] = useState('')
+  const [importInfo, setImportInfo] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const connectingFromRef = useRef<string | null>(null)
 
   // Step 3
@@ -289,6 +292,174 @@ export default function HostSetup() {
     polygonLayerRef.current = []
     const src = mapRef.current?.getSource('polygon-draw') as maplibregl.GeoJSONSource | undefined
     src?.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} })
+  }
+
+  function handleExport() {
+    const stem = gameName
+      .replace(/[^\x00-\x7F]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, '')
+      .trim()
+      .replace(/ +/g, '-')
+    const filename = stem ? `${stem}-stations.geojson` : 'stations.geojson'
+
+    const features: object[] = stations.map(s => {
+      const props: Record<string, unknown> = { railRushType: 'station', name: s.name }
+      if (s.osmNodeId != null) props.osmNodeId = s.osmNodeId
+      return { type: 'Feature', id: s.tempId, geometry: { type: 'Point', coordinates: [s.lng, s.lat] }, properties: props }
+    })
+
+    const byTempId = new Map(stations.map(p => [p.tempId, p]))
+    for (const [a, b] of connections) {
+      const pa = byTempId.get(a), pb = byTempId.get(b)
+      if (!pa || !pb) continue
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [[pa.lng, pa.lat], [pb.lng, pb.lat]] },
+        properties: { railRushType: 'connection', from: a, to: b },
+      })
+    }
+
+    const json = JSON.stringify({ type: 'FeatureCollection', features }, null, 2)
+    const blob = new Blob([json], { type: 'application/geo+json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    setImportError('')
+    setImportInfo('')
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(reader.result as string)
+      } catch (_) {
+        setImportError('Could not read file. Make sure it is a valid GeoJSON file.')
+        return
+      }
+
+      if (typeof parsed !== 'object' || parsed === null || (parsed as { type?: unknown }).type !== 'FeatureCollection') {
+        setImportError('Could not read file. Make sure it is a valid GeoJSON file.')
+        return
+      }
+
+      if (!mapRef.current) return
+
+      const fc = parsed as { type: string; features?: unknown[] }
+      const rawFeatures = Array.isArray(fc.features) ? fc.features : []
+
+      // Step 1: Merge stations
+      const mergedIds = new Set(stationsRef.current.map(s => s.tempId))
+      const nextStations: StationPin[] = [...stationsRef.current]
+      let addedStations = 0
+
+      for (const feat of rawFeatures) {
+        if (typeof feat !== 'object' || feat === null) continue
+        const f = feat as Record<string, unknown>
+        const props = typeof f.properties === 'object' && f.properties !== null
+          ? f.properties as Record<string, unknown>
+          : {}
+        if (props.railRushType !== 'station') continue
+
+        const fileId = f.id != null ? String(f.id) : ''
+        if (fileId !== '' && mergedIds.has(fileId)) continue
+
+        const geometry = typeof f.geometry === 'object' && f.geometry !== null
+          ? f.geometry as Record<string, unknown>
+          : {}
+        const coords = Array.isArray(geometry.coordinates) ? geometry.coordinates : []
+        const lng = typeof coords[0] === 'number' ? coords[0] : NaN
+        const lat = typeof coords[1] === 'number' ? coords[1] : NaN
+
+        if (!isFinite(lng) || !isFinite(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) continue
+
+        const resolvedId = fileId !== '' ? fileId : crypto.randomUUID()
+        const name = props.name != null && String(props.name) !== '' ? String(props.name) : 'Station'
+
+        let osmNodeId: number | undefined
+        if (props.osmNodeId != null) {
+          const n = parseInt(String(props.osmNodeId), 10)
+          if (isFinite(n)) osmNodeId = n
+        }
+
+        const pin: StationPin = osmNodeId != null
+          ? { tempId: resolvedId, name, lat, lng, osmNodeId }
+          : { tempId: resolvedId, name, lat, lng }
+        nextStations.push(pin)
+        mergedIds.add(resolvedId)
+        addedStations++
+
+        const el = document.createElement('div')
+        el.className = styles.mapPin
+        const dot = document.createElement('div')
+        dot.className = styles.mapPinDot
+        el.appendChild(dot)
+        const marker = new maplibregl.Marker({ element: el, draggable: true })
+          .setLngLat([lng, lat])
+          .addTo(mapRef.current!)
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation()
+          if (drawModeRef.current === 'connect') { handleConnectClick(resolvedId); return }
+          const current = stationsRef.current.find(s => s.tempId === resolvedId)
+          if (current) { setEditingStation(current); setEditName(current.name) }
+        })
+        marker.on('dragend', () => {
+          const { lat: newLat, lng: newLng } = marker.getLngLat()
+          setStations(prev => {
+            const updated = prev.map(s => s.tempId === resolvedId ? { ...s, lat: newLat, lng: newLng } : s)
+            updateConnectionLayer(connectionsRef.current, updated)
+            return updated
+          })
+        })
+        markersRef.current.set(resolvedId, marker)
+      }
+
+      // Step 2: Merge connections
+      const seen = new Set(connectionsRef.current.map(([a, b]) => [a, b].sort().join('|')))
+      const nextConnections: [string, string][] = [...connectionsRef.current]
+      let addedConnections = 0
+
+      for (const feat of rawFeatures) {
+        if (typeof feat !== 'object' || feat === null) continue
+        const f = feat as Record<string, unknown>
+        const props = typeof f.properties === 'object' && f.properties !== null
+          ? f.properties as Record<string, unknown>
+          : {}
+        if (props.railRushType !== 'connection') continue
+
+        const from = props.from != null ? String(props.from) : ''
+        const to = props.to != null ? String(props.to) : ''
+        if (!from || !to || from === to) continue
+        if (!mergedIds.has(from) || !mergedIds.has(to)) continue
+
+        const pairKey = [from, to].sort().join('|')
+        if (seen.has(pairKey)) continue
+
+        nextConnections.push([from, to])
+        seen.add(pairKey)
+        addedConnections++
+      }
+
+      // Step 3: Update state + map
+      setStations(nextStations)
+      setConnections(nextConnections)
+      updateConnectionLayer(nextConnections, nextStations)
+
+      if (addedStations === 0 && addedConnections === 0) {
+        setImportInfo('No stations or connections were added.')
+      }
+    }
+    reader.readAsText(file)
   }
 
   async function fetchOsmStations() {
@@ -556,7 +727,14 @@ export default function HostSetup() {
                   Clear All
                 </button>
               )}
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                <button className={styles.tool} onClick={() => fileInputRef.current?.click()}>Import</button>
+                <button className={styles.tool} onClick={handleExport} disabled={stations.length === 0}>Export</button>
+              </div>
             </div>
+            {importError && <p className={styles.importError}>{importError}</p>}
+            {importInfo && <p className={styles.importInfo}>{importInfo}</p>}
+            <input ref={fileInputRef} type="file" accept=".geojson,.json" style={{ display: 'none' }} onChange={handleImport} />
             <div ref={mapContainerRef} className={styles.mapContainer} />
             {editingStation && (
               <div className={styles.editOverlay}>
