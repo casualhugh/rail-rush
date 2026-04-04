@@ -1,0 +1,104 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skipBtn {
+  align-self: flex-start;
+  padding: 0.6rem 1.2rem;
+  background: var(--color-accent, #1A6B6B);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.skipBtn:hover {
+  opacity: 0.85;
+}
+
+.search {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.card:hover:not(:disabled) {
+  border-color: #1A6B6B;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.cardName {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.cardCity {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.cardMeta {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.cardLoading {
+  font-size: 0.78rem;
+  color: #999;
+}
+
+.loading {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.empty {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.loadMore {
+  align-self: center;
+  padding: 0.5rem 1.5rem;
+  background: transparent;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.loadMore:hover:not(:disabled) {
+  border-color: #1A6B6B;
+}
