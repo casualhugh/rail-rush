@@ -52,6 +52,17 @@ routerAdd("POST", "/api/rr/game", (e) => {
     createdTeams.push({ id: team.id, name: t.name, color: t.color });
   }
 
+  // Increment times_used on referenced map template (fire-and-forget)
+  if (body.mapTemplateId) {
+    try {
+      const tmpl = e.app.findRecordById("map_templates", body.mapTemplateId);
+      tmpl.set("times_used", (tmpl.get("times_used") || 0) + 1);
+      e.app.save(tmpl);
+    } catch (_) {
+      // silently ignore — game creation is not blocked by missing template
+    }
+  }
+
   return e.json(201, { gameId: game.id, inviteCode: gameCode, teams: createdTeams });
 });
 
