@@ -721,17 +721,25 @@ export default function HostSetup() {
     if (teams.length < 2) { setError('At least 2 teams are required'); return }
     setSaving(true)
     try {
-      const result = await api.post<{
-        gameId: string
-        inviteCode: string
-        teams: Array<{ id: string; name: string; color: string }>
-      }>('/api/rr/game', {
+      const createBody: {
+        name: string; startingCoins: number; maxStakeIncrement: number; tollCost: number
+        requireHostApproval: boolean; spectatorsAllowed: boolean
+        teams: { name: string; color: string }[]
+        mapTemplateId?: string
+      } = {
         name: gameName,
         startingCoins, maxStakeIncrement, tollCost,
         requireHostApproval: requireApproval,
         spectatorsAllowed: true,
         teams: teams.map(t => ({ name: t.name, color: t.color })),
-      })
+      }
+      if (selectedTemplate) createBody.mapTemplateId = selectedTemplate.id
+
+      const result = await api.post<{
+        gameId: string
+        inviteCode: string
+        teams: Array<{ id: string; name: string; color: string }>
+      }>('/api/rr/game', createBody)
 
       const stationResult = await api.post<{
         stations: Array<{ id: string; name: string; lat: number; lng: number }>
@@ -755,6 +763,18 @@ export default function HostSetup() {
             stationId: c.stationTempId ? tempToRealId[c.stationTempId] : undefined,
           })),
         })
+      }
+
+      // Fire-and-forget: save map as template
+      if (saveAsTemplate && templateName.trim() && stations.length > 0) {
+        const lngs = stations.map(s => s.lng)
+        const lats = stations.map(s => s.lat)
+        const PAD = 0.01
+        const mapBounds: [[number, number], [number, number]] = [
+          [Math.min(...lngs) - PAD, Math.min(...lats) - PAD],
+          [Math.max(...lngs) + PAD, Math.max(...lats) + PAD],
+        ]
+        saveMap({ name: templateName.trim(), mapBounds, stations, connections }).catch(() => {})
       }
 
       navigate(`/game/${result.gameId}/lobby`)
@@ -1097,6 +1117,28 @@ export default function HostSetup() {
               const color = PRESET_COLORS.find(c => !used.has(c)) ?? PRESET_COLORS[teams.length % 8]
               setTeams(t => [...t, { name: `Team ${t.length + 1}`, color }])
             }}>+ Add Team</button>}
+            <div className={styles.saveTemplateRow}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={saveAsTemplate}
+                  onChange={e => {
+                    setSaveAsTemplate(e.target.checked)
+                    if (e.target.checked && !templateName) setTemplateName(gameName)
+                  }}
+                />
+                Save map as template
+              </label>
+              {saveAsTemplate && (
+                <input
+                  className={styles.input}
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  placeholder="Template name"
+                  maxLength={60}
+                />
+              )}
+            </div>
             {error && <p className={styles.error}>{error}</p>}
             <button className={styles.launchBtn} onClick={launch}
               disabled={saving || teams.some(t => !t.name.trim())}>

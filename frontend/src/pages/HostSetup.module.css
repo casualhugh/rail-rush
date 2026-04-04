@@ -673,3 +673,18 @@
   margin-left: 6px;
   vertical-align: middle;
 }
+
+.saveTemplateRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
