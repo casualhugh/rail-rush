@@ -8,8 +8,8 @@ routerAdd("GET", "/api/rr/maps", (e) => {
 
   const q = e.request.url.query();
   const search = q.get("search") || "";
-  const limit = parseInt(q.get("limit") || "20", 10);
-  const offset = parseInt(q.get("offset") || "0", 10);
+  const limit  = Math.min(Math.max(parseInt(q.get("limit")  || "20", 10) || 20, 1), 100);
+  const offset = Math.max(parseInt(q.get("offset") || "0", 10) || 0, 0);
 
   let filter = "is_public = true";
   const params = {};
@@ -37,7 +37,7 @@ routerAdd("GET", "/api/rr/maps", (e) => {
 });
 
 
-// GET /api/rr/maps/:id
+// GET /api/rr/maps/{id}
 routerAdd("GET", "/api/rr/maps/{id}", (e) => {
   const authRecord = e.auth;
   if (!authRecord) throw new UnauthorizedError("unauthenticated");
@@ -78,6 +78,10 @@ routerAdd("POST", "/api/rr/maps", (e) => {
   if (!body.name) throw new BadRequestError("name is required");
   if (!body.stations || !Array.isArray(body.stations)) throw new BadRequestError("stations is required");
   if (!body.mapBounds) throw new BadRequestError("mapBounds is required");
+  if (!Array.isArray(body.mapBounds) || body.mapBounds.length !== 2 ||
+      !Array.isArray(body.mapBounds[0]) || !Array.isArray(body.mapBounds[1])) {
+    throw new BadRequestError("mapBounds must be [[west, south], [east, north]]");
+  }
 
   const col = e.app.findCollectionByNameOrId("map_templates");
   const record = new Record(col);
