@@ -254,6 +254,7 @@ export default function HostSetup() {
     if (!tmpl) return
     markersRef.current.forEach(m => m.remove())
     markersRef.current.clear()
+    setConnectingFrom(null)
     setStations(tmpl.stations)
     setConnections(tmpl.connections)
     stationsRef.current = tmpl.stations
