@@ -754,6 +754,22 @@ export default function HostSetup() {
 
       <div className={styles.content}>
 
+        {step === 1 && (
+          <div className={styles.stepPanel}>
+            <h2 className={styles.stepTitle}>Choose a Map</h2>
+            <MapGallery
+              onSelect={template => {
+                setSelectedTemplate(template)
+                setStep(2)
+              }}
+              onSkip={() => {
+                setSelectedTemplate(null)
+                setStep(2)
+              }}
+            />
+          </div>
+        )}
+
         {step === 2 && (
           <div className={styles.stepPanel}>
             <h2 className={styles.stepTitle}>Game Details</h2>
