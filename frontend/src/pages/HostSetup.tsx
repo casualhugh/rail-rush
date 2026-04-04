@@ -5,14 +5,13 @@ import { SlLocationPin, SlExclamation } from 'react-icons/sl'
 import { PiCoinVertical } from 'react-icons/pi'
 import { api } from '../lib/pb'
 import styles from './HostSetup.module.css'
-import { saveMap, MapTemplateDetail } from '../lib/api'
+import { saveMap, MapTemplateDetail, StationPin } from '../lib/api'
 import MapGallery from '../components/MapGallery'
 
 const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', marginBottom: '2px', height: "100%" }} />
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface StationPin { name: string; lat: number; lng: number; tempId: string; osmNodeId?: number }
 interface PhotonFeature {
   geometry: { coordinates: [number, number] }
   properties: { name?: string; city?: string; state?: string; country?: string }
