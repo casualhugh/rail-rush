@@ -679,7 +679,7 @@ export default function HostSetup() {
               <button
                 className={drawMode === 'pin' ? styles.toolActive : styles.tool}
                 onClick={() => { setDrawMode('pin'); setPolygonPoints([]); clearPolygonMarkers(); setConnectingFrom(null) }}
-              ><SlLocationPin style={{ verticalAlign: 'middle' }} /> Place Pins</button>
+              ><SlLocationPin style={{ verticalAlign: 'middle' }} /> Place Stations</button>
               <button
                 className={drawMode === 'polygon' ? styles.toolActive : styles.tool}
                 onClick={() => { setDrawMode('polygon'); setConnectingFrom(null) }}
