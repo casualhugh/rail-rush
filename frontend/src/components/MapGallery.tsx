@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { listMaps, getMap, MapTemplateSummary, MapTemplateDetail } from '../lib/api'
 import styles from './MapGallery.module.css'
 
+const LIMIT = 20
+
 interface Props {
   onSelect: (template: MapTemplateDetail) => void
   onSkip: () => void
@@ -12,10 +14,10 @@ export default function MapGallery({ onSelect, onSkip }: Props) {
   const [results, setResults] = useState<MapTemplateSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [cardError, setCardError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [offset, setOffset] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const LIMIT = 20
 
   async function fetchMaps(search: string, off: number, append: boolean) {
     setLoading(true)
@@ -32,6 +34,12 @@ export default function MapGallery({ onSelect, onSkip }: Props) {
 
   useEffect(() => {
     fetchMaps('', 0, false)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [])
 
   function handleSearch(q: string) {
@@ -55,7 +63,8 @@ export default function MapGallery({ onSelect, onSkip }: Props) {
       const detail = await getMap(id)
       onSelect(detail)
     } catch (_) {
-      // ignore
+      setCardError(id)
+      setTimeout(() => setCardError(null), 3000)
     } finally {
       setLoadingId(null)
     }
@@ -89,6 +98,7 @@ export default function MapGallery({ onSelect, onSkip }: Props) {
               {t.timesUsed > 0 && ` · used ${t.timesUsed}x`}
             </span>
             {loadingId === t.id && <span className={styles.cardLoading}> Loading...</span>}
+            {cardError === t.id && <span className={styles.cardError}>Failed to load</span>}
           </button>
         ))}
       </div>

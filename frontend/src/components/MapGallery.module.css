@@ -79,6 +79,11 @@
   color: #999;
 }
 
+.cardError {
+  font-size: 0.78rem;
+  color: #c0392b;
+}
+
 .loading {
   color: #888;
   font-size: 0.9rem;
