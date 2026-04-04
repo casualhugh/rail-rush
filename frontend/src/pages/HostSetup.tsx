@@ -11,6 +11,10 @@ const Coin = () => <PiCoinVertical style={{ verticalAlign: 'middle', marginBotto
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface StationPin { name: string; lat: number; lng: number; tempId: string; osmNodeId?: number }
+interface PhotonFeature {
+  geometry: { coordinates: [number, number] }
+  properties: { name?: string; city?: string; state?: string; country?: string }
+}
 interface TeamDraft  { name: string; color: string }
 interface ChallengeDraft {
   description: string
@@ -61,6 +65,10 @@ export default function HostSetup() {
   const [importInfo, setImportInfo] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const connectingFromRef = useRef<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<PhotonFeature[]>([])
+  const previewMarkerRef = useRef<maplibregl.Marker | null>(null)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Step 3
   const [startingCoins, setStartingCoins] = useState(25)
@@ -211,10 +219,83 @@ export default function HostSetup() {
     })
 
     return () => {
+      dismissPreview()
       map.remove()
       mapRef.current = null
     }
   }, [step])
+
+  function handleSearchChange(q: string) {
+    setSearchQuery(q)
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    if (!q.trim()) { setSearchResults([]); return }
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10`)
+        const data = await res.json() as { features: PhotonFeature[] }
+        setSearchResults(data.features || [])
+      } catch (_) {
+        setSearchResults([])
+      }
+    }, 300)
+  }
+
+  function dismissPreview() {
+    previewMarkerRef.current?.remove()
+    previewMarkerRef.current = null
+  }
+
+  function confirmPreviewPin(lat: number, lng: number, name: string) {
+    dismissPreview()
+    const tempId = crypto.randomUUID()
+    const pin: StationPin = { name, lat, lng, tempId }
+    const el = document.createElement('div')
+    el.className = styles.mapPin
+    const dot = document.createElement('div')
+    dot.className = styles.mapPinDot
+    el.appendChild(dot)
+    const marker = new maplibregl.Marker({ element: el, draggable: true })
+      .setLngLat([lng, lat])
+      .addTo(mapRef.current!)
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation()
+      if (drawModeRef.current === 'connect') { handleConnectClick(tempId); return }
+      const current = stationsRef.current.find(s => s.tempId === tempId)
+      if (current) { setEditingStation(current); setEditName(current.name) }
+    })
+    marker.on('dragend', () => {
+      const { lat: newLat, lng: newLng } = marker.getLngLat()
+      setStations(prev => {
+        const updated = prev.map(s => s.tempId === tempId ? { ...s, lat: newLat, lng: newLng } : s)
+        updateConnectionLayer(connectionsRef.current, updated)
+        return updated
+      })
+    })
+    markersRef.current.set(tempId, marker)
+    setStations(s => [...s, pin])
+  }
+
+  function selectSearchResult(feature: PhotonFeature) {
+    const [lng, lat] = feature.geometry.coordinates
+    const name = feature.properties.name || 'Station'
+    setSearchQuery('')
+    setSearchResults([])
+    mapRef.current?.flyTo({ center: [lng, lat], zoom: 15 })
+    dismissPreview()
+    const el = document.createElement('div')
+    el.className = styles.previewPin
+    const dot = document.createElement('div')
+    dot.className = styles.previewPinDot
+    el.appendChild(dot)
+    const tick = document.createElement('button')
+    tick.className = styles.previewPinTick
+    tick.textContent = '✓'
+    tick.onclick = (ev) => { ev.stopPropagation(); confirmPreviewPin(lat, lng, name) }
+    el.appendChild(tick)
+    previewMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+      .setLngLat([lng, lat])
+      .addTo(mapRef.current!)
+  }
 
   async function reverseGeocode(lat: number, lng: number, tempId: string) {
     try {
@@ -735,7 +816,33 @@ export default function HostSetup() {
             {importError && <p className={styles.importError}>{importError}</p>}
             {importInfo && <p className={styles.importInfo}>{importInfo}</p>}
             <input ref={fileInputRef} type="file" accept=".geojson,.json" style={{ display: 'none' }} onChange={handleImport} />
-            <div ref={mapContainerRef} className={styles.mapContainer} />
+            <div ref={mapContainerRef} className={styles.mapContainer}>
+              <div className={styles.mapSearchOverlay}>
+                <input
+                  className={styles.mapSearchInput}
+                  placeholder="Search for a place or station..."
+                  value={searchQuery}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && searchResults.length > 0) selectSearchResult(searchResults[0])
+                    if (e.key === 'Escape') { setSearchQuery(''); setSearchResults([]) }
+                  }}
+                />
+                {searchResults.length > 0 && (
+                  <div className={styles.mapSearchDropdown}>
+                    {searchResults.map((f, i) => {
+                      const sub = [f.properties.city, f.properties.state, f.properties.country].filter(Boolean).join(', ')
+                      return (
+                        <button key={i} className={styles.mapSearchItem} onClick={() => selectSearchResult(f)}>
+                          <span className={styles.mapSearchItemName}>{f.properties.name || 'Unknown'}</span>
+                          {sub && <span className={styles.mapSearchItemSub}>{sub}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
             {editingStation && (
               <div className={styles.editOverlay}>
                 <input className={styles.input} value={editName} onChange={e => setEditName(e.target.value)} autoFocus />
