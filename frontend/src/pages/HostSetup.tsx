@@ -255,14 +255,14 @@ export default function HostSetup() {
     if (!tmpl) return
     markersRef.current.forEach(m => m.remove())
     markersRef.current.clear()
-    setStations(tmpl.stations as StationPin[])
+    setStations(tmpl.stations)
     setConnections(tmpl.connections)
-    stationsRef.current = tmpl.stations as StationPin[]
+    stationsRef.current = tmpl.stations
     connectionsRef.current = tmpl.connections
-    for (const pin of tmpl.stations as StationPin[]) {
+    for (const pin of tmpl.stations) {
       addStationMarker(map, pin)
     }
-    updateConnectionLayer(tmpl.connections, tmpl.stations as StationPin[])
+    updateConnectionLayer(tmpl.connections, tmpl.stations)
     map.fitBounds(tmpl.mapBounds, { padding: 40 })
   }
 
